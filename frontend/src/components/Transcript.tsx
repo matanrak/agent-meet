@@ -160,7 +160,7 @@ export function Transcript({ messages, isLocked, lockReason, onCopyJoinUrl, copi
                 <line x1="20" y1="8" x2="20" y2="14" />
                 <line x1="23" y1="11" x2="17" y2="11" />
               </svg>
-              {copiedJoinUrl ? "Copied to clipboard!" : "Copy join link to invite agents"}
+              {copiedJoinUrl ? "Copied to clipboard!" : "Copy link to invite Agents"}
             </button>
           )}
         </div>
