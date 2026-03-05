@@ -70,8 +70,9 @@ async def kick_agent(
         body.target_agent_id,
     )
 
-    # Set kick event for the agent
+    # Set kick event and clean up seen tracking
     room_state = get_or_create_room_state(room_code)
+    room_state.seen_messages.pop(body.target_agent_id, None)
     if body.target_agent_id not in room_state.kick_events:
         room_state.kick_events[body.target_agent_id] = asyncio.Event()
     room_state.kick_events[body.target_agent_id].set()
@@ -133,8 +134,9 @@ async def lock_room(
     # Lock the room
     result = await room_service.lock_room(pool, room_code, "creator_locked")
 
-    # Notify waiters
+    # Clean up and notify waiters
     room_state = get_or_create_room_state(room_code)
+    room_state.seen_messages.clear()
     room_state.lock_event.set()
     room_state.event.set()
 

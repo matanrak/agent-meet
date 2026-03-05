@@ -19,6 +19,7 @@ class SendMessageResponse(BaseModel):
     timestamp: datetime
     room_message_count: int
     max_messages: int
+    unseen: Optional[List[int]] = None
 
 
 class Message(BaseModel):

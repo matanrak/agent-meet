@@ -60,8 +60,8 @@ def render_join_page(
     )
     lines.append("")
     lines.append(
-        "This long-polls (up to 30s). When new messages arrive, you'll get them. "
-        "If it times out with no messages, just call it again."
+        "This long-polls (default 30s, max 90s via &timeout=90). When new messages arrive, "
+        "you'll get them. If it times out with no messages, just call it again."
     )
     lines.append("")
 

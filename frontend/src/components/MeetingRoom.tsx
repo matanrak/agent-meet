@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRoom } from "@/hooks/useRoom";
 import { useCreator } from "@/hooks/useCreator";
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -57,11 +57,6 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
       setIsLocking(false);
     }
   }, [roomCode, creatorToken]);
-
-  const lastSpeakerId = useMemo(() => {
-    if (messages.length === 0) return undefined;
-    return messages[messages.length - 1]?.agent_id;
-  }, [messages]);
 
   const activeAgentCount = agents.filter((a) => a.status === "active").length;
 
@@ -151,7 +146,6 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
             <AgentSidebar
               agents={agents}
               messages={messages}
-              lastSpeakerId={lastSpeakerId}
               isCreator={isCreator && !isLocked}
               kickingId={kickingId}
               onKick={isCreator && creatorToken && !isLocked ? handleKick : undefined}
@@ -316,8 +310,7 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
               <AgentSidebar
                 agents={agents}
                 messages={messages}
-                lastSpeakerId={lastSpeakerId}
-                isCreator={isCreator && !isLocked}
+                  isCreator={isCreator && !isLocked}
                 kickingId={kickingId}
                 onKick={isCreator && creatorToken && !isLocked ? handleKick : undefined}
                 onClose={() => setSidePanel(null)}

@@ -7,6 +7,8 @@ from typing import Any, Dict, List, Optional
 
 import asyncpg
 
+import json
+
 from app.services import agent_service, room_service
 from app.services.room_state import get_or_create_room_state
 from app.models.message import RoomEvent
@@ -88,44 +90,55 @@ async def send_message(
             "Agent has been kicked or has left the room",
         )
 
-    # 4. Insert message
+    # 4. Snapshot what this agent has seen (from in-memory tracking)
+    room_state = get_or_create_room_state(room_code)
+    seen_set = room_state.get_seen(agent_id)
+    seen_at_send_json = json.dumps(sorted(seen_set)) if seen_set else None
+
+    # 5. Atomic insert: increment room counter and use it as room_seq
     row = await pool.fetchrow(
         """
-        INSERT INTO app.messages (room_code, agent_id, agent_name, content)
-        VALUES ($1, $2, $3, $4)
-        RETURNING id, created_at
+        WITH seq AS (
+            UPDATE app.rooms
+            SET message_count = message_count + 1,
+                last_activity_at = now(),
+                first_message_at = COALESCE(first_message_at, now())
+            WHERE room_code = $1
+            RETURNING message_count, max_messages
+        )
+        INSERT INTO app.messages (room_code, agent_id, agent_name, content, room_seq, seen_at_send)
+        SELECT $1, $2, $3, $4, seq.message_count, $5::jsonb
+        FROM seq
+        RETURNING id, room_seq, created_at,
+                  (SELECT message_count FROM seq) AS room_message_count,
+                  (SELECT max_messages FROM seq) AS max_messages
         """,
         room_code,
         agent_id,
         agent_name,
         content,
+        seen_at_send_json,
     )
-    message_id = row["id"]
+    message_id = row["room_seq"]
     timestamp = row["created_at"]
+    room_message_count = row["room_message_count"]
+    max_messages = row["max_messages"]
 
-    # 5. Update room counters
-    updated = await pool.fetchrow(
-        """
-        UPDATE app.rooms
-        SET message_count = message_count + 1,
-            last_activity_at = now(),
-            first_message_at = COALESCE(first_message_at, now())
-        WHERE room_code = $1
-        RETURNING message_count, max_messages
-        """,
-        room_code,
-    )
-    room_message_count = updated["message_count"]
-    max_messages = updated["max_messages"]
+    # Compute unseen messages (messages in room that agent hasn't seen)
+    # Current room_seq is the one we just inserted, so total is 1..room_message_count
+    # Agent has seen `seen_set`, and we exclude the message they just sent
+    all_prior = set(range(1, room_message_count))  # everything before this message
+    unseen = sorted(all_prior - seen_set) if seen_set else []
 
-    # 6. Check if we should auto-lock
+    # 6. The agent has now "seen" its own message
+    room_state.mark_seen(agent_id, [message_id])
+
+    # 7. Check if we should auto-lock
     if room_message_count >= max_messages:
         await room_service.lock_room(pool, room_code, "max_messages_reached")
-        room_state = get_or_create_room_state(room_code)
         room_state.lock_event.set()
 
-    # 7. Wake waiters
-    room_state = get_or_create_room_state(room_code)
+    # 8. Wake waiters
     room_state.event.set()
 
     return {
@@ -133,24 +146,26 @@ async def send_message(
         "timestamp": timestamp,
         "room_message_count": room_message_count,
         "max_messages": max_messages,
+        "unseen": unseen,
     }
 
 
 async def get_messages_after(
     pool: asyncpg.Pool,
     room_code: str,
-    after_id: int,
+    after_seq: int,
 ) -> List[Dict[str, Any]]:
-    """Get messages in a room with ID > after_id, ordered by ID."""
+    """Get messages in a room with room_seq > after_seq, ordered by room_seq."""
     rows = await pool.fetch(
         """
-        SELECT id AS message_id, agent_id, agent_name, content, created_at AS timestamp
+        SELECT room_seq AS message_id, agent_id, agent_name, content,
+               created_at AS timestamp, seen_at_send
         FROM app.messages
-        WHERE room_code = $1 AND id > $2
-        ORDER BY id
+        WHERE room_code = $1 AND room_seq > $2
+        ORDER BY room_seq
         """,
         room_code,
-        after_id,
+        after_seq,
     )
     return [dict(r) for r in rows]
 
@@ -167,10 +182,11 @@ async def get_recent_messages(
     if limit is not None:
         rows = await pool.fetch(
             """
-            SELECT id AS message_id, agent_id, agent_name, content, created_at AS timestamp
+            SELECT room_seq AS message_id, agent_id, agent_name, content,
+                   created_at AS timestamp, seen_at_send
             FROM app.messages
             WHERE room_code = $1
-            ORDER BY id DESC
+            ORDER BY room_seq DESC
             LIMIT $2
             """,
             room_code,
@@ -180,10 +196,11 @@ async def get_recent_messages(
     else:
         rows = await pool.fetch(
             """
-            SELECT id AS message_id, agent_id, agent_name, content, created_at AS timestamp
+            SELECT room_seq AS message_id, agent_id, agent_name, content,
+                   created_at AS timestamp, seen_at_send
             FROM app.messages
             WHERE room_code = $1
-            ORDER BY id
+            ORDER BY room_seq
             """,
             room_code,
         )

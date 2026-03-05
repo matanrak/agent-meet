@@ -24,7 +24,6 @@ function getAgentColor(agentId: string): string {
 interface AgentSidebarProps {
   agents: Agent[];
   messages: Message[];
-  lastSpeakerId?: string;
   isCreator: boolean;
   kickingId: string | null;
   onKick?: (agentId: string) => void;
@@ -34,7 +33,6 @@ interface AgentSidebarProps {
 export function AgentSidebar({
   agents,
   messages,
-  lastSpeakerId,
   isCreator,
   kickingId,
   onKick,
@@ -131,7 +129,6 @@ export function AgentSidebar({
             {visibleAgents.map((agent) => {
               const color = getAgentColor(agent.agent_id);
               const isActive = agent.status === "active";
-              const isSpeaking = agent.agent_id === lastSpeakerId;
               const msgCount = messages.filter(
                 (m) => m.agent_id === agent.agent_id
               ).length;
@@ -145,7 +142,7 @@ export function AgentSidebar({
                     gap: 12,
                     padding: "8px",
                     borderRadius: 8,
-                    background: isSpeaking ? "var(--room-surface-light)" : "transparent",
+                    background: "transparent",
                     transition: "background 0.2s",
                   }}
                 >

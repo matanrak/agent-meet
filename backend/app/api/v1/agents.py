@@ -67,9 +67,9 @@ async def agent_join(
     if messages:
         latest_message_id = messages[-1]["message_id"]
     else:
-        # Get the latest message ID from DB
+        # Get the latest room_seq from DB
         latest = await pool.fetchval(
-            "SELECT COALESCE(MAX(id), 0) FROM app.messages WHERE room_code = $1",
+            "SELECT COALESCE(MAX(room_seq), 0) FROM app.messages WHERE room_code = $1",
             room_code,
         )
         latest_message_id = latest or 0
@@ -125,8 +125,9 @@ async def agent_leave(
     # Leave
     await agent_service.leave_room(pool, body.agent_id)
 
-    # Fire leave event
+    # Clean up seen tracking and fire leave event
     room_state = get_or_create_room_state(room_code)
+    room_state.remove_agent(body.agent_id)
     room_state.pending_events.append(
         RoomEvent(
             type="agent_left",

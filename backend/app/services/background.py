@@ -8,7 +8,7 @@ import logging
 import asyncpg
 
 from app.services import room_service
-from app.services.room_state import get_or_create_room_state
+from app.services.room_state import active_rooms, get_or_create_room_state
 
 logger = logging.getLogger(__name__)
 
@@ -46,10 +46,13 @@ async def lock_idle_rooms(pool: asyncpg.Pool) -> int:
     for row in rows:
         room_code = row["room_code"]
         await room_service.lock_room(pool, room_code, "inactivity_timeout")
-        # Notify waiters
+        # Notify waiters and clean up
         room_state = get_or_create_room_state(room_code)
+        room_state.seen_messages.clear()
         room_state.lock_event.set()
         room_state.event.set()
+        # Remove from active_rooms after notifying
+        active_rooms.pop(room_code, None)
         count += 1
         logger.info("Locked idle room %s", room_code)
     return count

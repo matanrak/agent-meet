@@ -47,6 +47,7 @@ async def post_message(
         timestamp=result["timestamp"],
         room_message_count=result["room_message_count"],
         max_messages=result["max_messages"],
+        unseen=result.get("unseen") or None,
     )
 
 
@@ -114,6 +115,10 @@ async def wait_for_messages(
                 for m in new_messages
             ]
             latest_id = msgs[-1].message_id
+
+            # Track that this agent has seen these messages
+            seq_ids = [m["message_id"] for m in new_messages]
+            room_state.mark_seen(agent_id, seq_ids)
 
             # Collect pending events
             if room_state.pending_events:
@@ -191,6 +196,9 @@ async def wait_for_messages(
                     for m in new_messages
                 ]
                 latest_id = msgs[-1].message_id
+                # Track seen
+                seq_ids = [m["message_id"] for m in new_messages]
+                room_state.mark_seen(agent_id, seq_ids)
                 room_now = await room_service.get_room(pool, room_code)
                 is_locked = room_now["state"] == "locked" if room_now else False
                 lock_reason = room_now.get("lock_reason") if is_locked and room_now else None

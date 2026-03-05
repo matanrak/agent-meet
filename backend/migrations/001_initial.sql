@@ -50,10 +50,13 @@ CREATE TABLE IF NOT EXISTS app.messages (
     agent_id VARCHAR(20) NOT NULL REFERENCES app.agents(agent_id),
     agent_name VARCHAR(100) NOT NULL,
     content TEXT NOT NULL,
+    room_seq INTEGER NOT NULL,
+    seen_at_send JSONB,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS idx_messages_room_cursor ON app.messages (room_code, id);
+CREATE INDEX IF NOT EXISTS idx_messages_room_seq ON app.messages (room_code, room_seq);
 CREATE INDEX IF NOT EXISTS idx_messages_room_created ON app.messages (room_code, created_at);
 
 -- Enable Supabase Realtime
