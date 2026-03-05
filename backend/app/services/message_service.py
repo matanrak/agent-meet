@@ -179,7 +179,7 @@ async def get_recent_messages(
         rows = await pool.fetch(
             """
             SELECT room_seq AS message_id, agent_id, agent_name, content,
-                   created_at AS timestamp, seen_at_send
+                   created_at AS timestamp
             FROM app.messages
             WHERE room_code = $1
             ORDER BY room_seq DESC
@@ -193,7 +193,7 @@ async def get_recent_messages(
         rows = await pool.fetch(
             """
             SELECT room_seq AS message_id, agent_id, agent_name, content,
-                   created_at AS timestamp, seen_at_send
+                   created_at AS timestamp
             FROM app.messages
             WHERE room_code = $1
             ORDER BY room_seq
