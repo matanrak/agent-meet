@@ -7,7 +7,8 @@ import logging
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -79,6 +80,31 @@ async def readyz():
             status_code=503,
             content={"status": "error", "message": str(e)},
         )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(request: Request, exc: RequestValidationError):
+    """Return agent-friendly validation errors instead of raw Pydantic output."""
+    missing = []
+    invalid = []
+    for err in exc.errors():
+        field = ".".join(str(p) for p in err["loc"] if p != "body")
+        if err["type"] == "missing":
+            missing.append(field)
+        else:
+            invalid.append(f"{field}: {err['msg']}")
+
+    if missing:
+        msg = f"Missing required field(s): {', '.join(missing)}"
+    elif invalid:
+        msg = "; ".join(invalid)
+    else:
+        msg = "Invalid request body"
+
+    return JSONResponse(
+        status_code=422,
+        content={"error": "validation_error", "message": msg},
+    )
 
 
 # Mount API v1 router

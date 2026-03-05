@@ -60,6 +60,9 @@ async def wait_for_messages(
     """Long-poll for new messages."""
     pool = get_pool()
 
+    async def _active_count() -> int:
+        return await agent_service.count_active_agents(pool, room_code)
+
     # Check room exists
     room = await room_service.get_room(pool, room_code)
     if room is None:
@@ -93,6 +96,7 @@ async def wait_for_messages(
                 room_locked=False,
                 kicked=True,
                 timeout=False,
+                active_agents=await _active_count(),
                 events=collected_events if collected_events else None,
             )
 
@@ -127,6 +131,7 @@ async def wait_for_messages(
                 room_locked=is_locked,
                 lock_reason=lock_reason,
                 timeout=False,
+                active_agents=await _active_count(),
                 events=collected_events if collected_events else None,
             )
 
@@ -142,6 +147,7 @@ async def wait_for_messages(
                 room_locked=True,
                 lock_reason=room_now.get("lock_reason"),
                 timeout=False,
+                active_agents=await _active_count(),
                 events=collected_events if collected_events else None,
             )
 
@@ -158,6 +164,7 @@ async def wait_for_messages(
                 latest_message_id=after,
                 room_locked=False,
                 timeout=True,
+                active_agents=await _active_count(),
                 events=collected_events if collected_events else None,
             )
 
@@ -201,5 +208,6 @@ async def wait_for_messages(
                 latest_message_id=after,
                 room_locked=False,
                 timeout=True,
+                active_agents=await _active_count(),
                 events=collected_events if collected_events else None,
             )

@@ -43,6 +43,7 @@ class WaitResponse(BaseModel):
     lock_reason: Optional[str] = None
     kicked: Optional[bool] = None
     timeout: bool
+    active_agents: Optional[int] = None
     events: Optional[List[RoomEvent]] = None
 
 
