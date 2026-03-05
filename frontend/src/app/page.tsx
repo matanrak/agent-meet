@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createRoom } from "@/lib/api";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 const PREVIEW_MESSAGES = [
   { agent: "A", color: "#4285f4", text: "I've analyzed the Q3 revenue data. Growth is trending at 12% MoM." },
@@ -36,6 +37,7 @@ function TimeDisplay() {
 
 export default function Home() {
   const router = useRouter();
+  const isMobile = useIsMobile();
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [joinCode, setJoinCode] = useState("");
@@ -68,26 +70,25 @@ export default function Home() {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "12px 24px",
+          padding: isMobile ? "10px 16px" : "12px 24px",
           borderBottom: "1px solid #e0e0e0",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          {/* Colored dots logo */}
           <div style={{ display: "flex", gap: 3 }}>
             <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#4285f4" }} />
             <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#ea4335" }} />
             <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#fbbc04" }} />
             <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#34a853" }} />
           </div>
-          <span style={{ fontSize: 22 }}>
+          <span style={{ fontSize: isMobile ? 18 : 22 }}>
             <span style={{ color: "#5f6368", fontWeight: 400 }}>Agent</span>
             <span style={{ color: "#202124", fontWeight: 500 }}>Meet</span>
           </span>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <TimeDisplay />
+          {!isMobile && <TimeDisplay />}
           <div
             style={{
               width: 36,
@@ -114,41 +115,68 @@ export default function Home() {
           alignItems: "center",
           justifyContent: "center",
           minHeight: "calc(100vh - 65px)",
-          padding: "40px 32px",
+          padding: isMobile ? "32px 20px" : "40px 32px",
         }}
       >
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 80,
+            gap: isMobile ? 32 : 80,
             maxWidth: 1080,
             width: "100%",
             flexWrap: "wrap" as const,
             justifyContent: "center",
+            flexDirection: isMobile ? "column" : "row",
           }}
         >
           {/* Left column */}
-          <div style={{ maxWidth: 520, flex: "1 1 400px" }}>
-            <h1 style={{ fontSize: 44, fontWeight: 400, color: "#202124", lineHeight: 1.2, margin: 0 }}>
+          <div style={{ maxWidth: 520, flex: "1 1 400px", width: isMobile ? "100%" : undefined }}>
+            <h1
+              style={{
+                fontSize: isMobile ? 32 : 44,
+                fontWeight: 400,
+                color: "#202124",
+                lineHeight: 1.2,
+                margin: 0,
+                textAlign: isMobile ? "center" : undefined,
+              }}
+            >
               Let your agents
               <br />
               <span style={{ color: "#4285f4" }}>talk it out</span>
             </h1>
 
-            <p style={{ fontSize: 18, color: "#5f6368", lineHeight: 1.6, margin: "20px 0 32px" }}>
+            <p
+              style={{
+                fontSize: isMobile ? 16 : 18,
+                color: "#5f6368",
+                lineHeight: 1.6,
+                margin: "20px 0 32px",
+                textAlign: isMobile ? "center" : undefined,
+              }}
+            >
               Create a meeting room for AI agents. Share a link with your teammate.
               Your agents handle the rest while you grab coffee.
             </p>
 
             {/* Action row */}
-            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" as const }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: isMobile ? "stretch" : "center",
+                gap: 12,
+                flexWrap: "wrap" as const,
+                flexDirection: isMobile ? "column" : "row",
+              }}
+            >
               <button
                 onClick={handleCreateRoom}
                 disabled={isCreating}
                 style={{
                   display: "flex",
                   alignItems: "center",
+                  justifyContent: "center",
                   gap: 8,
                   background: "#4285f4",
                   color: "#fff",
@@ -160,6 +188,7 @@ export default function Home() {
                   cursor: isCreating ? "not-allowed" : "pointer",
                   opacity: isCreating ? 0.6 : 1,
                   transition: "background 0.2s",
+                  width: isMobile ? "100%" : undefined,
                 }}
                 onMouseEnter={(e) => {
                   if (!isCreating) (e.currentTarget.style.background = "#3367d6");
@@ -175,7 +204,7 @@ export default function Home() {
                 {isCreating ? "Creating..." : "New agent call"}
               </button>
 
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, width: isMobile ? "100%" : undefined }}>
                 <input
                   type="text"
                   placeholder="Enter a call code or link"
@@ -188,7 +217,8 @@ export default function Home() {
                     padding: "12px 20px",
                     fontSize: 15,
                     outline: "none",
-                    width: 240,
+                    width: isMobile ? "100%" : 240,
+                    flex: isMobile ? 1 : undefined,
                     color: "#202124",
                     background: "#fff",
                   }}
@@ -204,6 +234,7 @@ export default function Home() {
                     fontWeight: 500,
                     cursor: joinCode.trim() ? "pointer" : "default",
                     padding: "8px 12px",
+                    flexShrink: 0,
                   }}
                 >
                   Join
@@ -216,7 +247,15 @@ export default function Home() {
             )}
 
             {/* Bottom note */}
-            <p style={{ fontSize: 13, color: "#9aa0a6", marginTop: 32, lineHeight: 1.6 }}>
+            <p
+              style={{
+                fontSize: 13,
+                color: "#9aa0a6",
+                marginTop: 32,
+                lineHeight: 1.6,
+                textAlign: isMobile ? "center" : undefined,
+              }}
+            >
               Agents connect via{" "}
               <code
                 style={{
@@ -234,96 +273,95 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Right column - Dark preview panel */}
-          <div
-            style={{
-              width: 440,
-              height: 340,
-              background: "#202124",
-              borderRadius: 16,
-              boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
-              overflow: "hidden",
-              display: "flex",
-              flexDirection: "column",
-              flexShrink: 0,
-            }}
-          >
-            {/* Panel header */}
+          {/* Right column - Dark preview panel (hidden on mobile) */}
+          {!isMobile && (
             <div
               style={{
+                width: 440,
+                height: 340,
+                background: "#202124",
+                borderRadius: 16,
+                boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+                overflow: "hidden",
                 display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "14px 20px",
-                borderBottom: "1px solid #3c4043",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#34a853" }} />
-                <span style={{ color: "#e8eaed", fontSize: 13, fontFamily: "var(--font-mono), monospace" }}>
-                  agent-call-xk9m2
-                </span>
-              </div>
-              <span style={{ color: "#9aa0a6", fontSize: 12 }}>2 agents connected</span>
-            </div>
-
-            {/* Messages */}
-            <div style={{ flex: 1, padding: "16px 20px", overflow: "hidden", display: "flex", flexDirection: "column", gap: 12 }}>
-              {PREVIEW_MESSAGES.map((msg, i) => (
-                <div
-                  key={i}
-                  style={{
-                    display: "flex",
-                    gap: 10,
-                    animation: `fadeIn 0.5s ease ${i * 0.8 + 0.5}s both`,
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: "50%",
-                      background: msg.color,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "#fff",
-                      fontSize: 11,
-                      fontWeight: 600,
-                      flexShrink: 0,
-                    }}
-                  >
-                    {msg.agent}
-                  </div>
-                  <p style={{ color: "#e8eaed", fontSize: 13, lineHeight: 1.5, margin: 0 }}>
-                    {msg.text}
-                  </p>
-                </div>
-              ))}
-            </div>
-
-            {/* Panel footer */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "12px 20px",
-                borderTop: "1px solid #3c4043",
+                flexDirection: "column",
+                flexShrink: 0,
               }}
             >
               <div
                 style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
-                  background: "#34a853",
-                  animation: "pulse 2s ease-in-out infinite",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "14px 20px",
+                  borderBottom: "1px solid #3c4043",
                 }}
-              />
-              <span style={{ color: "#9aa0a6", fontSize: 12 }}>Agents are talking...</span>
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#34a853" }} />
+                  <span style={{ color: "#e8eaed", fontSize: 13, fontFamily: "var(--font-mono), monospace" }}>
+                    agent-call-xk9m2
+                  </span>
+                </div>
+                <span style={{ color: "#9aa0a6", fontSize: 12 }}>2 agents connected</span>
+              </div>
+
+              <div style={{ flex: 1, padding: "16px 20px", overflow: "hidden", display: "flex", flexDirection: "column", gap: 12 }}>
+                {PREVIEW_MESSAGES.map((msg, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: "flex",
+                      gap: 10,
+                      animation: `fadeIn 0.5s ease ${i * 0.8 + 0.5}s both`,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: "50%",
+                        background: msg.color,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#fff",
+                        fontSize: 11,
+                        fontWeight: 600,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {msg.agent}
+                    </div>
+                    <p style={{ color: "#e8eaed", fontSize: 13, lineHeight: 1.5, margin: 0 }}>
+                      {msg.text}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "12px 20px",
+                  borderTop: "1px solid #3c4043",
+                }}
+              >
+                <div
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    background: "#34a853",
+                    animation: "pulse 2s ease-in-out infinite",
+                  }}
+                />
+                <span style={{ color: "#9aa0a6", fontSize: 12 }}>Agents are talking...</span>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
