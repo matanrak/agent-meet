@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef, useEffect, useCallback, useState } from "react";
+import { useRef, useEffect, useCallback, useState, memo } from "react";
 import type { Message } from "@/lib/types";
+import ReactMarkdown from "react-markdown";
 
 const AGENT_COLORS = [
   "#e94560",
@@ -251,6 +252,7 @@ export function Transcript({ messages, isLocked, lockReason, onCopyJoinUrl, copi
                     </div>
                   )}
                   <div
+                    className="msg-content"
                     style={{
                       background: "var(--room-surface-light)",
                       padding: "10px 14px",
@@ -258,11 +260,10 @@ export function Transcript({ messages, isLocked, lockReason, onCopyJoinUrl, copi
                       fontSize: 14,
                       color: "var(--room-text)",
                       lineHeight: 1.5,
-                      whiteSpace: "pre-wrap",
                       wordBreak: "break-word",
                     }}
                   >
-                    {msg.content}
+                    <MessageContent content={msg.content} />
                   </div>
                 </div>
               </div>
@@ -273,3 +274,77 @@ export function Transcript({ messages, isLocked, lockReason, onCopyJoinUrl, copi
     </div>
   );
 }
+
+/** Renders markdown content with graceful fallback to plain text. */
+const MessageContent = memo(function MessageContent({ content }: { content: string }) {
+  try {
+    return (
+      <ReactMarkdown
+        components={{
+          // Strip outer <p> wrapper to keep inline feel for short messages
+          p: ({ children }) => <p style={{ margin: "0 0 8px", lineHeight: 1.5 }}>{children}</p>,
+          strong: ({ children }) => <strong style={{ fontWeight: 700 }}>{children}</strong>,
+          em: ({ children }) => <em>{children}</em>,
+          code: ({ children, className }) => {
+            // Inline code vs code block
+            if (className) {
+              return (
+                <code
+                  style={{
+                    display: "block",
+                    background: "rgba(0,0,0,0.3)",
+                    padding: "8px 12px",
+                    borderRadius: 6,
+                    fontSize: 13,
+                    fontFamily: "var(--font-mono, monospace)",
+                    overflowX: "auto",
+                    whiteSpace: "pre",
+                    margin: "8px 0",
+                  }}
+                >
+                  {children}
+                </code>
+              );
+            }
+            return (
+              <code
+                style={{
+                  background: "rgba(0,0,0,0.25)",
+                  padding: "1px 5px",
+                  borderRadius: 3,
+                  fontSize: 13,
+                  fontFamily: "var(--font-mono, monospace)",
+                }}
+              >
+                {children}
+              </code>
+            );
+          },
+          pre: ({ children }) => <>{children}</>,
+          ul: ({ children }) => <ul style={{ margin: "4px 0", paddingLeft: 20 }}>{children}</ul>,
+          ol: ({ children }) => <ol style={{ margin: "4px 0", paddingLeft: 20 }}>{children}</ol>,
+          li: ({ children }) => <li style={{ marginBottom: 2 }}>{children}</li>,
+          h1: ({ children }) => <div style={{ fontSize: 18, fontWeight: 700, margin: "8px 0 4px" }}>{children}</div>,
+          h2: ({ children }) => <div style={{ fontSize: 16, fontWeight: 700, margin: "8px 0 4px" }}>{children}</div>,
+          h3: ({ children }) => <div style={{ fontSize: 15, fontWeight: 600, margin: "6px 0 4px" }}>{children}</div>,
+          blockquote: ({ children }) => (
+            <div style={{ borderLeft: "3px solid var(--room-text-muted)", paddingLeft: 12, margin: "4px 0", color: "var(--room-text-secondary)" }}>
+              {children}
+            </div>
+          ),
+          a: ({ href, children }) => (
+            <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: "var(--room-primary)", textDecoration: "underline" }}>
+              {children}
+            </a>
+          ),
+          hr: () => <hr style={{ border: "none", borderTop: "1px solid var(--room-border)", margin: "8px 0" }} />,
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    );
+  } catch {
+    // Fallback: render as plain text if markdown parsing fails
+    return <span style={{ whiteSpace: "pre-wrap" }}>{content}</span>;
+  }
+});

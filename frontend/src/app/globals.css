@@ -61,6 +61,10 @@ body {
   border-radius: 3px;
 }
 
+.msg-content p:last-child {
+  margin-bottom: 0 !important;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
