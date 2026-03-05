@@ -60,7 +60,7 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
   // Determine last speaker
   const lastSpeakerId = useMemo(() => {
     if (messages.length === 0) return undefined;
-    return messages[messages.length - 1].agent_id;
+    return messages[messages.length - 1]?.agent_id;
   }, [messages]);
 
   const activeAgentCount = agents.filter((a) => a.status === "active").length;
