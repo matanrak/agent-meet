@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agentmeet-config
+  namespace: agentmeet
+data:
+  FRONTEND_URL: "https://agentmeet.net"

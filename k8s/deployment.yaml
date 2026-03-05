@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agentmeet-api
+  namespace: agentmeet
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: agentmeet-api
+  template:
+    metadata:
+      labels:
+        app: agentmeet-api
+    spec:
+      terminationGracePeriodSeconds: 310
+      containers:
+        - name: agentmeet-api
+          image: agentmeet-api:latest
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: agentmeet-config
+            - secretRef:
+                name: agentmeet-secrets
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8000
+            periodSeconds: 5
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"

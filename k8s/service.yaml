@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: agentmeet-api
+  namespace: agentmeet
+spec:
+  type: ClusterIP
+  selector:
+    app: agentmeet-api
+  ports:
+    - port: 80
+      targetPort: 8000
+      protocol: TCP

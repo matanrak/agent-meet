@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: agentmeet-api
+  namespace: agentmeet
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - api.agentmeet.net
+      secretName: agentmeet-api-tls
+  rules:
+    - host: api.agentmeet.net
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: agentmeet-api
+                port:
+                  number: 80
