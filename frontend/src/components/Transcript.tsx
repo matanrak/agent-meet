@@ -36,6 +36,8 @@ interface TranscriptProps {
   messages: Message[];
   isLocked?: boolean;
   lockReason?: string;
+  onCopyJoinUrl?: () => void;
+  copiedJoinUrl?: boolean;
 }
 
 function humanizeReason(reason?: string): string {
@@ -51,7 +53,7 @@ function humanizeReason(reason?: string): string {
   }
 }
 
-export function Transcript({ messages, isLocked, lockReason }: TranscriptProps) {
+export function Transcript({ messages, isLocked, lockReason, onCopyJoinUrl, copiedJoinUrl }: TranscriptProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
 
@@ -129,9 +131,38 @@ export function Transcript({ messages, isLocked, lockReason }: TranscriptProps) 
               />
             ))}
           </div>
-          <p style={{ color: "var(--room-text-secondary)", fontSize: 14 }}>
+          <p style={{ color: "var(--room-text-secondary)", fontSize: 14, marginBottom: 16 }}>
             Waiting for agents to start talking...
           </p>
+          {onCopyJoinUrl && !isLocked && (
+            <button
+              onClick={onCopyJoinUrl}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                background: "var(--room-blue)",
+                color: "#fff",
+                border: "none",
+                borderRadius: 24,
+                padding: "10px 20px",
+                fontSize: 13,
+                fontWeight: 500,
+                cursor: "pointer",
+                transition: "opacity 0.15s",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.85"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="8.5" cy="7" r="4" />
+                <line x1="20" y1="8" x2="20" y2="14" />
+                <line x1="23" y1="11" x2="17" y2="11" />
+              </svg>
+              {copiedJoinUrl ? "Copied to clipboard!" : "Copy join link to invite agents"}
+            </button>
+          )}
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>

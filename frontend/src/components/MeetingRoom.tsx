@@ -26,7 +26,7 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
   const [showLockDialog, setShowLockDialog] = useState(false);
   const [isLocking, setIsLocking] = useState(false);
   const [kickingId, setKickingId] = useState<string | null>(null);
-  const [sidePanel, setSidePanel] = useState<SidePanel>(null);
+  const [sidePanel, setSidePanel] = useState<SidePanel>("people");
   const [copiedJoinUrl, setCopiedJoinUrl] = useState(false);
   const [copiedTranscript, setCopiedTranscript] = useState(false);
 
@@ -167,7 +167,7 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
               onClose={() => setSidePanel(null)}
             />
           ) : (
-            <Transcript messages={messages} isLocked={isLocked} lockReason={lockReason} />
+            <Transcript messages={messages} isLocked={isLocked} lockReason={lockReason} onCopyJoinUrl={handleCopyJoinUrl} copiedJoinUrl={copiedJoinUrl} />
           )}
         </div>
 
@@ -236,7 +236,7 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
               active={sidePanel === "people"}
               badge={activeAgentCount > 0 ? activeAgentCount : undefined}
               onClick={() => togglePanel("people")}
-              title="People"
+              title="Agents"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -294,7 +294,7 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
             overflow: "hidden",
           }}
         >
-          <Transcript messages={messages} isLocked={isLocked} lockReason={lockReason} />
+          <Transcript messages={messages} isLocked={isLocked} lockReason={lockReason} onCopyJoinUrl={handleCopyJoinUrl} copiedJoinUrl={copiedJoinUrl} />
         </div>
 
         {/* Side panel (togglable) */}
@@ -365,17 +365,19 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <BottomIcon
             onClick={handleCopyJoinUrl}
-            title={copiedJoinUrl ? "Copied!" : "Copy join link"}
+            title={copiedJoinUrl ? "Copied!" : "Add agent"}
+            color="var(--room-blue)"
           >
             {copiedJoinUrl ? (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--room-green)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             ) : (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-                <polyline points="10 17 15 12 10 7" />
-                <line x1="15" y1="12" x2="3" y2="12" />
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="8.5" cy="7" r="4" />
+                <line x1="20" y1="8" x2="20" y2="14" />
+                <line x1="23" y1="11" x2="17" y2="11" />
               </svg>
             )}
           </BottomIcon>
@@ -442,7 +444,7 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
             active={sidePanel === "people"}
             badge={activeAgentCount > 0 ? activeAgentCount : undefined}
             onClick={() => togglePanel("people")}
-            title="People"
+            title="Agents"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -472,13 +474,17 @@ function BottomIcon({
   badge,
   onClick,
   title,
+  color,
 }: {
   children: React.ReactNode;
   active?: boolean;
   badge?: number;
   onClick?: () => void;
   title?: string;
+  color?: string;
 }) {
+  const bg = color || (active ? "var(--room-primary)" : "var(--room-surface-light)");
+  const fg = color ? "#fff" : active ? "#202124" : "var(--room-text)";
   return (
     <button
       onClick={onClick}
@@ -487,22 +493,24 @@ function BottomIcon({
         width: 40,
         height: 40,
         borderRadius: "50%",
-        background: active ? "var(--room-primary)" : "var(--room-surface-light)",
-        color: active ? "#202124" : "var(--room-text)",
+        background: bg,
+        color: fg,
         border: "none",
         cursor: "pointer",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        transition: "background 0.15s",
+        transition: "background 0.15s, opacity 0.15s",
         position: "relative",
         flexShrink: 0,
       }}
       onMouseEnter={(e) => {
-        if (!active) e.currentTarget.style.background = "#4e5154";
+        if (color) { e.currentTarget.style.opacity = "0.85"; }
+        else if (!active) { e.currentTarget.style.background = "#4e5154"; }
       }}
       onMouseLeave={(e) => {
-        if (!active) e.currentTarget.style.background = "var(--room-surface-light)";
+        if (color) { e.currentTarget.style.opacity = "1"; }
+        else if (!active) { e.currentTarget.style.background = "var(--room-surface-light)"; }
       }}
     >
       {children}

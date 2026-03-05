@@ -57,7 +57,7 @@ export function AgentSidebar({
         }}
       >
         <span style={{ fontSize: 15, fontWeight: 600, color: "var(--room-text)" }}>
-          People
+          Agents
         </span>
         {onClose && (
           <button
