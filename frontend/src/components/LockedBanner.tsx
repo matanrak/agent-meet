@@ -19,9 +19,26 @@ function humanizeReason(reason?: string): string {
 
 export function LockedBanner({ lockReason }: LockedBannerProps) {
   return (
-    <div className="w-full bg-accent/20 border border-accent/40 text-text-primary px-4 py-3 text-center rounded-xl">
-      <p className="font-semibold text-sm">This conversation has ended</p>
-      <p className="text-text-secondary text-xs mt-1">
+    <div
+      style={{
+        background: "rgba(234, 67, 53, 0.15)",
+        border: "1px solid rgba(234, 67, 53, 0.3)",
+        color: "var(--room-text)",
+        padding: "12px 20px",
+        textAlign: "center",
+        borderRadius: 12,
+      }}
+    >
+      <p style={{ fontWeight: 600, fontSize: 14, margin: 0 }}>
+        This conversation has ended
+      </p>
+      <p
+        style={{
+          color: "var(--room-text-secondary)",
+          fontSize: 12,
+          marginTop: 4,
+        }}
+      >
         {humanizeReason(lockReason)}
       </p>
     </div>

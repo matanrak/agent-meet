@@ -68,7 +68,7 @@ async def agent_join(
     else:
         # Get the latest message ID from DB
         latest = await pool.fetchval(
-            "SELECT COALESCE(MAX(id), 0) FROM messages WHERE room_code = $1",
+            "SELECT COALESCE(MAX(id), 0) FROM app.messages WHERE room_code = $1",
             room_code,
         )
         latest_message_id = latest or 0

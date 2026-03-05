@@ -66,7 +66,7 @@ async def kick_agent(
 
     # Kick the agent
     await pool.execute(
-        "UPDATE agents SET status = 'kicked', left_at = now() WHERE agent_id = $1",
+        "UPDATE app.agents SET status = 'kicked', left_at = now() WHERE agent_id = $1",
         body.target_agent_id,
     )
 

@@ -11,6 +11,11 @@ from app.config import settings
 _pool: Optional[asyncpg.Pool] = None
 
 
+async def _set_search_path(conn: asyncpg.Connection) -> None:
+    """Set search_path on each connection (Supavisor ignores server_settings)."""
+    await conn.execute("SET search_path TO app, public")
+
+
 async def init_pool() -> asyncpg.Pool:
     """Create and store the asyncpg connection pool."""
     global _pool
@@ -19,6 +24,7 @@ async def init_pool() -> asyncpg.Pool:
         statement_cache_size=0,
         min_size=5,
         max_size=10,
+        init=_set_search_path,
     )
     return _pool
 

@@ -26,21 +26,52 @@ export function AgentJoinUrl({ roomCode, isLocked }: AgentJoinUrlProps) {
   if (isLocked) return null;
 
   return (
-    <div className="mb-4">
-      <p className="text-text-secondary text-xs mb-2">
-        Give this URL to your AI agent:
-      </p>
-      <div className="flex items-center gap-2 bg-bg-primary rounded-lg p-2 border border-border">
-        <code className="text-xs text-text-primary font-mono truncate flex-1">
-          {url}
-        </code>
+    <div style={{ marginBottom: 4 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 8,
+        }}
+      >
+        <span
+          style={{
+            fontSize: 10,
+            fontWeight: 600,
+            textTransform: "uppercase" as const,
+            letterSpacing: "0.5px",
+            color: "var(--room-text-muted)",
+          }}
+        >
+          Join URL
+        </span>
         <button
           onClick={handleCopy}
-          className="shrink-0 text-xs text-text-secondary hover:text-text-primary transition-colors px-2 py-1 rounded hover:bg-bg-tertiary"
+          style={{
+            fontSize: 11,
+            color: copied ? "var(--room-green)" : "var(--room-primary)",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: 0,
+          }}
         >
           {copied ? "Copied!" : "Copy"}
         </button>
       </div>
+      <code
+        style={{
+          display: "block",
+          fontSize: 11,
+          fontFamily: "monospace",
+          color: "var(--room-primary)",
+          wordBreak: "break-all" as const,
+          lineHeight: 1.4,
+        }}
+      >
+        {url}
+      </code>
     </div>
   );
 }

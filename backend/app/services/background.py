@@ -17,7 +17,7 @@ async def cleanup_pending_agents(pool: asyncpg.Pool) -> int:
     """Delete agents still pending after 5 minutes. Returns count deleted."""
     result = await pool.execute(
         """
-        DELETE FROM agents
+        DELETE FROM app.agents
         WHERE status = 'pending'
           AND created_at < now() - interval '5 minutes'
         """
@@ -36,7 +36,7 @@ async def lock_idle_rooms(pool: asyncpg.Pool) -> int:
     """Lock rooms with no activity for 30 minutes. Returns count locked."""
     rows = await pool.fetch(
         """
-        SELECT room_code FROM rooms
+        SELECT room_code FROM app.rooms
         WHERE state = 'active'
           AND last_activity_at IS NOT NULL
           AND last_activity_at < now() - interval '30 minutes'

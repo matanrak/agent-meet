@@ -44,7 +44,7 @@ export function useRoom(roomCode: string) {
         "postgres_changes",
         {
           event: "INSERT",
-          schema: "public",
+          schema: "app",
           table: "messages",
           filter: `room_code=eq.${roomCode}`,
         },
@@ -63,7 +63,7 @@ export function useRoom(roomCode: string) {
         "postgres_changes",
         {
           event: "INSERT",
-          schema: "public",
+          schema: "app",
           table: "agents",
           filter: `room_code=eq.${roomCode}`,
         },
@@ -84,7 +84,7 @@ export function useRoom(roomCode: string) {
         "postgres_changes",
         {
           event: "UPDATE",
-          schema: "public",
+          schema: "app",
           table: "agents",
           filter: `room_code=eq.${roomCode}`,
         },
@@ -110,7 +110,7 @@ export function useRoom(roomCode: string) {
         "postgres_changes",
         {
           event: "UPDATE",
-          schema: "public",
+          schema: "app",
           table: "rooms",
           filter: `room_code=eq.${roomCode}`,
         },

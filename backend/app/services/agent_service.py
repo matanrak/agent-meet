@@ -21,7 +21,7 @@ async def register_agent(
     agent_id = generate_agent_id()
     await pool.execute(
         """
-        INSERT INTO agents (agent_id, room_code, status)
+        INSERT INTO app.agents (agent_id, room_code, status)
         VALUES ($1, $2, 'pending')
         """,
         agent_id,
@@ -38,7 +38,7 @@ async def activate_agent(
     """Transition agent from pending to active."""
     await pool.execute(
         """
-        UPDATE agents
+        UPDATE app.agents
         SET status = 'active', agent_name = $2, activated_at = now()
         WHERE agent_id = $1
         """,
@@ -54,7 +54,7 @@ async def update_agent_name(
 ) -> None:
     """Update agent's display name."""
     await pool.execute(
-        "UPDATE agents SET agent_name = $2 WHERE agent_id = $1",
+        "UPDATE app.agents SET agent_name = $2 WHERE agent_id = $1",
         agent_id,
         agent_name,
     )
@@ -67,7 +67,7 @@ async def validate_agent(
 ) -> Optional[Dict[str, Any]]:
     """Validate agent exists and belongs to the room. Returns agent row or None."""
     row = await pool.fetchrow(
-        "SELECT * FROM agents WHERE agent_id = $1 AND room_code = $2",
+        "SELECT * FROM app.agents WHERE agent_id = $1 AND room_code = $2",
         agent_id,
         room_code,
     )
@@ -82,7 +82,7 @@ async def get_agents_in_room(
     rows = await pool.fetch(
         """
         SELECT agent_id, agent_name, status
-        FROM agents
+        FROM app.agents
         WHERE room_code = $1 AND status != 'pending'
         ORDER BY activated_at
         """,
@@ -97,7 +97,7 @@ async def leave_room(
 ) -> None:
     """Mark an agent as left."""
     await pool.execute(
-        "UPDATE agents SET status = 'left', left_at = now() WHERE agent_id = $1",
+        "UPDATE app.agents SET status = 'left', left_at = now() WHERE agent_id = $1",
         agent_id,
     )
 
@@ -108,7 +108,7 @@ async def get_agent(
 ) -> Optional[Dict[str, Any]]:
     """Fetch a single agent by agent_id."""
     row = await pool.fetchrow(
-        "SELECT * FROM agents WHERE agent_id = $1",
+        "SELECT * FROM app.agents WHERE agent_id = $1",
         agent_id,
     )
     return dict(row) if row else None
@@ -120,7 +120,7 @@ async def count_active_agents(
 ) -> int:
     """Count active agents in a room."""
     count = await pool.fetchval(
-        "SELECT COUNT(*) FROM agents WHERE room_code = $1 AND status = 'active'",
+        "SELECT COUNT(*) FROM app.agents WHERE room_code = $1 AND status = 'active'",
         room_code,
     )
     return int(count) if count else 0

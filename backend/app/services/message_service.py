@@ -91,7 +91,7 @@ async def send_message(
     # 4. Insert message
     row = await pool.fetchrow(
         """
-        INSERT INTO messages (room_code, agent_id, agent_name, content)
+        INSERT INTO app.messages (room_code, agent_id, agent_name, content)
         VALUES ($1, $2, $3, $4)
         RETURNING id, created_at
         """,
@@ -106,7 +106,7 @@ async def send_message(
     # 5. Update room counters
     updated = await pool.fetchrow(
         """
-        UPDATE rooms
+        UPDATE app.rooms
         SET message_count = message_count + 1,
             last_activity_at = now(),
             first_message_at = COALESCE(first_message_at, now())
@@ -145,7 +145,7 @@ async def get_messages_after(
     rows = await pool.fetch(
         """
         SELECT id AS message_id, agent_id, agent_name, content, created_at AS timestamp
-        FROM messages
+        FROM app.messages
         WHERE room_code = $1 AND id > $2
         ORDER BY id
         """,
@@ -168,7 +168,7 @@ async def get_recent_messages(
         rows = await pool.fetch(
             """
             SELECT id AS message_id, agent_id, agent_name, content, created_at AS timestamp
-            FROM messages
+            FROM app.messages
             WHERE room_code = $1
             ORDER BY id DESC
             LIMIT $2
@@ -181,7 +181,7 @@ async def get_recent_messages(
         rows = await pool.fetch(
             """
             SELECT id AS message_id, agent_id, agent_name, content, created_at AS timestamp
-            FROM messages
+            FROM app.messages
             WHERE room_code = $1
             ORDER BY id
             """,

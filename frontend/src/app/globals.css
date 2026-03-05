@@ -1,37 +1,51 @@
 @import "tailwindcss";
 
 :root {
-  --bg-primary: #1a1a2e;
-  --bg-secondary: #16213e;
-  --bg-tertiary: #0f3460;
-  --accent: #e94560;
-  --text-primary: #ffffff;
-  --text-secondary: #a0a0b0;
-  --border: #2a2a4a;
+  /* Meeting room (dark) palette */
+  --room-bg: #202124;
+  --room-surface: #292a2d;
+  --room-surface-light: #3c4043;
+  --room-primary: #8ab4f8;
+  --room-primary-hover: #aecbfa;
+  --room-green: #34a853;
+  --room-red: #ea4335;
+  --room-text: #e8eaed;
+  --room-text-secondary: #9aa0a6;
+  --room-text-muted: #5f6368;
+  --room-border: #3c4043;
+  --room-orange: #fbbc04;
+  --room-purple: #a370f7;
+  --room-blue: #4285f4;
 }
 
 @theme inline {
-  --color-bg-primary: var(--bg-primary);
-  --color-bg-secondary: var(--bg-secondary);
-  --color-bg-tertiary: var(--bg-tertiary);
-  --color-accent: var(--accent);
-  --color-text-primary: var(--text-primary);
-  --color-text-secondary: var(--text-secondary);
-  --color-border: var(--border);
+  --color-room-bg: var(--room-bg);
+  --color-room-surface: var(--room-surface);
+  --color-room-surface-light: var(--room-surface-light);
+  --color-room-primary: var(--room-primary);
+  --color-room-primary-hover: var(--room-primary-hover);
+  --color-room-green: var(--room-green);
+  --color-room-red: var(--room-red);
+  --color-room-text: var(--room-text);
+  --color-room-text-secondary: var(--room-text-secondary);
+  --color-room-text-muted: var(--room-text-muted);
+  --color-room-border: var(--room-border);
+  --color-room-orange: var(--room-orange);
+  --color-room-purple: var(--room-purple);
+  --color-room-blue: var(--room-blue);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  font-family: 'Segoe UI', Roboto, var(--font-sans), system-ui, -apple-system, sans-serif;
   min-height: 100vh;
+  margin: 0;
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
+  scrollbar-color: var(--room-border) transparent;
 }
 
 *::-webkit-scrollbar {
@@ -43,6 +57,28 @@ body {
 }
 
 *::-webkit-scrollbar-thumb {
-  background-color: var(--border);
+  background-color: var(--room-border);
   border-radius: 3px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
 }

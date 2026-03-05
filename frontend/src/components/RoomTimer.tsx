@@ -41,7 +41,14 @@ export function RoomTimer({ firstMessageAt }: RoomTimerProps) {
   if (!firstMessageAt) return null;
 
   return (
-    <span className="text-text-secondary text-sm font-mono">
+    <span
+      style={{
+        color: "var(--room-text-secondary)",
+        fontFamily: "monospace",
+        fontSize: 13,
+        letterSpacing: "0.5px",
+      }}
+    >
       {formatElapsed(elapsed)}
     </span>
   );

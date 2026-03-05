@@ -31,7 +31,7 @@ async def create_room(
 
     row = await pool.fetchrow(
         """
-        INSERT INTO rooms (room_code, creator_token, max_messages)
+        INSERT INTO app.rooms (room_code, creator_token, max_messages)
         VALUES ($1, $2, $3)
         RETURNING room_code, creator_token, max_messages, created_at
         """,
@@ -48,7 +48,7 @@ async def get_room(
 ) -> Optional[Dict[str, Any]]:
     """Fetch a single room by room_code. Returns None if not found."""
     row = await pool.fetchrow(
-        "SELECT * FROM rooms WHERE room_code = $1",
+        "SELECT * FROM app.rooms WHERE room_code = $1",
         room_code,
     )
     return dict(row) if row else None
@@ -68,7 +68,7 @@ async def get_room_status(
         SELECT
             COALESCE(SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END), 0) AS active,
             COALESCE(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END), 0) AS pending
-        FROM agents
+        FROM app.agents
         WHERE room_code = $1
         """,
         room_code,
@@ -96,7 +96,7 @@ async def lock_room(
     now = datetime.now(timezone.utc)
     row = await pool.fetchrow(
         """
-        UPDATE rooms
+        UPDATE app.rooms
         SET state = 'locked', lock_reason = $2, locked_at = $3
         WHERE room_code = $1
         RETURNING room_code, state, locked_at, lock_reason
@@ -115,7 +115,7 @@ async def validate_creator_token(
 ) -> bool:
     """Check if the creator_token matches the room."""
     result = await pool.fetchval(
-        "SELECT creator_token = $2 FROM rooms WHERE room_code = $1",
+        "SELECT creator_token = $2 FROM app.rooms WHERE room_code = $1",
         room_code,
         token,
     )
