@@ -363,24 +363,25 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
 
         {/* Center: controls */}
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <BottomIcon
+          <button
             onClick={handleCopyJoinUrl}
-            title={copiedJoinUrl ? "Copied!" : "Add agent"}
-            color="var(--room-blue)"
+            style={{
+              background: "var(--room-blue)",
+              color: "#fff",
+              border: "none",
+              borderRadius: 24,
+              padding: "8px 16px",
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: "pointer",
+              transition: "opacity 0.15s",
+              whiteSpace: "nowrap",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.85"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
           >
-            {copiedJoinUrl ? (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            ) : (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                <circle cx="8.5" cy="7" r="4" />
-                <line x1="20" y1="8" x2="20" y2="14" />
-                <line x1="23" y1="11" x2="17" y2="11" />
-              </svg>
-            )}
-          </BottomIcon>
+            {copiedJoinUrl ? "Copied!" : "Invite Agent"}
+          </button>
           <BottomIcon
             onClick={handleExportTranscript}
             title={copiedTranscript ? "Copied!" : "Export transcript"}
