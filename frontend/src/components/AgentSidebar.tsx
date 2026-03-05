@@ -96,14 +96,14 @@ export function AgentSidebar({
             }}
           >
             <div style={{ display: "flex", gap: 6 }}>
-              {[0, 1, 2].map((i) => (
+              {["#4285f4", "#ea4335", "#fbbc04"].map((color, i) => (
                 <span
                   key={i}
                   style={{
                     width: 6,
                     height: 6,
                     borderRadius: "50%",
-                    background: "var(--room-text-muted)",
+                    background: color,
                     display: "inline-block",
                     animation: `pulse 1.4s ease-in-out ${i * 0.2}s infinite`,
                   }}

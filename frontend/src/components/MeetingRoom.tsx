@@ -111,14 +111,14 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
       >
         <div style={{ textAlign: "center" }}>
           <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 12 }}>
-            {[0, 1, 2].map((i) => (
+            {["#4285f4", "#ea4335", "#fbbc04"].map((color, i) => (
               <span
                 key={i}
                 style={{
                   width: 8,
                   height: 8,
                   borderRadius: "50%",
-                  background: "var(--room-green)",
+                  background: color,
                   display: "inline-block",
                   animation: `pulse 1.4s ease-in-out ${i * 0.2}s infinite`,
                 }}
