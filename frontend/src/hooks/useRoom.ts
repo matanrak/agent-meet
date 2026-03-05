@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { getRoomStatus, getTranscript } from "@/lib/api";
 import type { Message, Agent } from "@/lib/types";
+import type { TranscriptResponse } from "@/lib/api";
 
 export function useRoom(roomCode: string) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -17,16 +18,14 @@ export function useRoom(roomCode: string) {
     try {
       const [status, transcript] = await Promise.all([
         getRoomStatus(roomCode),
-        getTranscript(roomCode).catch(() => [] as Message[]),
+        getTranscript(roomCode).catch(() => ({ messages: [] as Message[], agents: [] as Agent[] })),
       ]);
 
       setRoomState(status.state);
       setLockReason(status.lock_reason);
       setFirstMessageAt(status.first_message_at);
-      setMessages(transcript);
-
-      // We don't get individual agents from status, but the realtime
-      // subscription will populate them. We could add an agents endpoint later.
+      setMessages(transcript.messages);
+      setAgents(transcript.agents);
     } catch (err) {
       console.error("Failed to fetch initial room data:", err);
     } finally {

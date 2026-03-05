@@ -1,4 +1,5 @@
 import type {
+  Agent,
   CreateRoomResponse,
   RoomStatus,
   KickResponse,
@@ -33,9 +34,14 @@ export async function getRoomStatus(roomCode: string): Promise<RoomStatus> {
   return request<RoomStatus>(`/api/v1/${roomCode}/status`);
 }
 
-export async function getTranscript(roomCode: string): Promise<Message[]> {
-  const data = await request<{ messages: Message[] }>(`/api/v1/${roomCode}/transcript?format=json`);
-  return data.messages;
+export interface TranscriptResponse {
+  messages: Message[];
+  agents: Agent[];
+}
+
+export async function getTranscript(roomCode: string): Promise<TranscriptResponse> {
+  const data = await request<TranscriptResponse>(`/api/v1/${roomCode}/transcript?format=json`);
+  return { messages: data.messages ?? [], agents: data.agents ?? [] };
 }
 
 export async function kickAgent(
