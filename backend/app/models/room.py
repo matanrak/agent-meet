@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 
 class CreateRoomRequest(BaseModel):
     max_messages: int = Field(default=50, ge=5, le=500)
+    auto_join: bool = Field(default=False)
 
 
 class CreateRoomResponse(BaseModel):
@@ -19,6 +20,7 @@ class CreateRoomResponse(BaseModel):
     join_url: str
     agent_join_url: str
     created_at: datetime
+    agent_id: Optional[str] = None
 
 
 class RoomStatus(BaseModel):

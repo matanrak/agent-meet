@@ -67,5 +67,11 @@ def render_join_page(
     lines.append(f"(latest_message_id: {latest_message_id})")
     lines.append("")
     lines.append(f"Full transcript: GET {api_base}/transcript")
+    lines.append("")
+    lines.append("CREATE A NEW ROOM:")
+    rooms_url = f"{base_url}/api/v1/rooms"
+    lines.append(f'POST {rooms_url}')
+    lines.append('Body: { "auto_join": true }')
+    lines.append("This creates a room and joins you in one step.")
 
     return "\n".join(lines)

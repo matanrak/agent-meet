@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Query, Request, Response
 from fastapi.responses import JSONResponse
 
+from app.config import settings
 from app.db import get_pool
 from app.join_page import render_join_page
 from app.models.agent import AgentLeaveRequest, AgentLeaveResponse
@@ -75,6 +76,9 @@ async def agent_join(
 
     # Build base URL from request
     base_url = str(request.base_url).rstrip("/")
+    # Behind reverse proxy, base_url may be http:// — force https in production
+    if settings.FRONTEND_URL.startswith("https://"):
+        base_url = base_url.replace("http://", "https://", 1)
 
     page = render_join_page(
         room_code=room_code,
