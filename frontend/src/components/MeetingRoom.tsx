@@ -571,7 +571,8 @@ function InvitePopover({
       >
         Send this link to your AI agent
       </div>
-      <div
+      <button
+        onClick={onCopy}
         style={{
           display: "flex",
           alignItems: "center",
@@ -579,7 +580,14 @@ function InvitePopover({
           background: "var(--room-surface-light)",
           borderRadius: 6,
           padding: "8px 10px",
+          width: "100%",
+          border: "none",
+          cursor: "pointer",
+          textAlign: "left",
+          transition: "background 0.15s",
         }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = "#4e5154"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = "var(--room-surface-light)"; }}
       >
         <span
           style={{
@@ -589,30 +597,22 @@ function InvitePopover({
             color: "var(--room-text-secondary)",
             wordBreak: "break-all",
             lineHeight: 1.4,
-            userSelect: "all",
           }}
         >
           {joinUrl}
         </span>
-        <button
-          onClick={onCopy}
+        <span
           style={{
-            background: copiedJoinUrl ? "var(--room-green)" : "var(--room-blue)",
-            color: "#fff",
-            border: "none",
-            borderRadius: 6,
-            padding: "5px 12px",
+            color: copiedJoinUrl ? "var(--room-green)" : "var(--room-blue)",
             fontSize: 12,
             fontWeight: 500,
-            cursor: "pointer",
             whiteSpace: "nowrap",
-            transition: "background 0.15s",
             flexShrink: 0,
           }}
         >
           {copiedJoinUrl ? "Copied!" : "Copy"}
-        </button>
-      </div>
+        </span>
+      </button>
       <div
         style={{
           fontSize: 11,
