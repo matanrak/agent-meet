@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useRoom } from "@/hooks/useRoom";
 import { useCreator } from "@/hooks/useCreator";
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -29,6 +29,8 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
   const [sidePanel, setSidePanel] = useState<SidePanel>("people");
   const [copiedJoinUrl, setCopiedJoinUrl] = useState(false);
   const [copiedTranscript, setCopiedTranscript] = useState(false);
+  const [showInvitePopover, setShowInvitePopover] = useState(false);
+  const inviteButtonRef = useRef<HTMLButtonElement>(null);
 
   const handleKick = useCallback(
     async (agentId: string) => {
@@ -199,30 +201,60 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
             </span>
           </div>
 
-          {/* Center: end call (creator only) */}
-          {isCreator && creatorToken && !isLocked && (
-            <button
-              onClick={() => setShowLockDialog(true)}
-              style={{
-                background: "var(--room-red)",
-                color: "#fff",
-                border: "none",
-                borderRadius: 24,
-                width: 40,
-                height: 40,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                flexShrink: 0,
-              }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91" />
-                <line x1="23" y1="1" x2="1" y2="23" />
-              </svg>
-            </button>
-          )}
+          {/* Center: invite + end call */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ position: "relative" }}>
+              <button
+                data-invite-toggle
+                onClick={() => setShowInvitePopover((v) => !v)}
+                style={{
+                  background: "var(--room-blue)",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 24,
+                  padding: "6px 14px",
+                  fontSize: 12,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Invite
+              </button>
+              {showInvitePopover && (
+                <InvitePopover
+                  joinUrl={joinUrl}
+                  onClose={() => setShowInvitePopover(false)}
+                  copiedJoinUrl={copiedJoinUrl}
+                  onCopy={handleCopyJoinUrl}
+                  mobile
+                />
+              )}
+            </div>
+            {isCreator && creatorToken && !isLocked && (
+              <button
+                onClick={() => setShowLockDialog(true)}
+                style={{
+                  background: "var(--room-red)",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 24,
+                  width: 40,
+                  height: 40,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  flexShrink: 0,
+                }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91" />
+                  <line x1="23" y1="1" x2="1" y2="23" />
+                </svg>
+              </button>
+            )}
+          </div>
 
           {/* Right: toggle icons */}
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -355,26 +387,38 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
         </div>
 
         {/* Center: controls */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <button
-            onClick={handleCopyJoinUrl}
-            style={{
-              background: "var(--room-blue)",
-              color: "#fff",
-              border: "none",
-              borderRadius: 24,
-              padding: "8px 16px",
-              fontSize: 13,
-              fontWeight: 500,
-              cursor: "pointer",
-              transition: "opacity 0.15s",
-              whiteSpace: "nowrap",
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.85"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
-          >
-            {copiedJoinUrl ? "Copied!" : "Invite Agent"}
-          </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, position: "relative" }}>
+          <div style={{ position: "relative" }}>
+            <button
+              ref={inviteButtonRef}
+              data-invite-toggle
+              onClick={() => setShowInvitePopover((v) => !v)}
+              style={{
+                background: "var(--room-blue)",
+                color: "#fff",
+                border: "none",
+                borderRadius: 24,
+                padding: "8px 16px",
+                fontSize: 13,
+                fontWeight: 500,
+                cursor: "pointer",
+                transition: "opacity 0.15s",
+                whiteSpace: "nowrap",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.85"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
+            >
+              Invite Agent
+            </button>
+            {showInvitePopover && (
+              <InvitePopover
+                joinUrl={joinUrl}
+                onClose={() => setShowInvitePopover(false)}
+                copiedJoinUrl={copiedJoinUrl}
+                onCopy={handleCopyJoinUrl}
+              />
+            )}
+          </div>
           <BottomIcon
             onClick={handleExportTranscript}
             title={copiedTranscript ? "Copied!" : "Export transcript"}
@@ -461,6 +505,127 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
 }
 
 /* ===== Sub-components ===== */
+
+function InvitePopover({
+  joinUrl,
+  onClose,
+  copiedJoinUrl,
+  onCopy,
+  mobile,
+}: {
+  joinUrl: string;
+  onClose: () => void;
+  copiedJoinUrl: boolean;
+  onCopy: () => void;
+  mobile?: boolean;
+}) {
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        popoverRef.current &&
+        !popoverRef.current.contains(e.target as Node) &&
+        !(e.target as HTMLElement).closest?.("[data-invite-toggle]")
+      ) {
+        onClose();
+      }
+    }
+    function handleEscape(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      ref={popoverRef}
+      style={{
+        position: "absolute",
+        bottom: "calc(100% + 10px)",
+        left: mobile ? "50%" : "50%",
+        transform: "translateX(-50%)",
+        background: "var(--room-surface)",
+        border: "1px solid var(--room-border)",
+        borderRadius: 10,
+        padding: "14px 16px",
+        width: mobile ? "calc(100vw - 32px)" : 340,
+        maxWidth: mobile ? "calc(100vw - 32px)" : 340,
+        boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+        animation: "popoverIn 0.15s ease-out",
+        zIndex: 100,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 13,
+          fontWeight: 600,
+          color: "var(--room-text)",
+          marginBottom: 10,
+        }}
+      >
+        Send this link to your AI agent
+      </div>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          background: "var(--room-surface-light)",
+          borderRadius: 6,
+          padding: "8px 10px",
+        }}
+      >
+        <span
+          style={{
+            flex: 1,
+            fontFamily: "var(--font-mono, monospace)",
+            fontSize: 11,
+            color: "var(--room-text-secondary)",
+            wordBreak: "break-all",
+            lineHeight: 1.4,
+            userSelect: "all",
+          }}
+        >
+          {joinUrl}
+        </span>
+        <button
+          onClick={onCopy}
+          style={{
+            background: copiedJoinUrl ? "var(--room-green)" : "var(--room-blue)",
+            color: "#fff",
+            border: "none",
+            borderRadius: 6,
+            padding: "5px 12px",
+            fontSize: 12,
+            fontWeight: 500,
+            cursor: "pointer",
+            whiteSpace: "nowrap",
+            transition: "background 0.15s",
+            flexShrink: 0,
+          }}
+        >
+          {copiedJoinUrl ? "Copied!" : "Copy"}
+        </button>
+      </div>
+      <div
+        style={{
+          fontSize: 11,
+          color: "var(--room-text-muted)",
+          marginTop: 8,
+          lineHeight: 1.4,
+        }}
+      >
+        The agent will receive instructions when it fetches this URL
+      </div>
+    </div>
+  );
+}
 
 function BottomIcon({
   children,
