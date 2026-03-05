@@ -1,14 +1,11 @@
 "use client";
 
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import { useRoom } from "@/hooks/useRoom";
 import { useCreator } from "@/hooks/useCreator";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { Transcript } from "./Transcript";
 import { AgentSidebar } from "./AgentSidebar";
-import { AgentJoinUrl } from "./AgentJoinUrl";
-import { RoomTimer } from "./RoomTimer";
-import { LockedBanner } from "./LockedBanner";
 import { LockConfirmDialog } from "./LockConfirmDialog";
 import { getAgentJoinUrl, kickAgent, lockRoom } from "@/lib/api";
 
@@ -16,7 +13,7 @@ interface MeetingRoomProps {
   roomCode: string;
 }
 
-type MobilePanel = "transcript" | "agents" | "info";
+type SidePanel = "people" | "info" | null;
 
 export function MeetingRoom({ roomCode }: MeetingRoomProps) {
   const { messages, agents, roomState, lockReason, firstMessageAt, isLoading } =
@@ -26,13 +23,12 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
 
   const isLocked = roomState === "locked";
 
-  // Creator controls state
   const [showLockDialog, setShowLockDialog] = useState(false);
   const [isLocking, setIsLocking] = useState(false);
   const [kickingId, setKickingId] = useState<string | null>(null);
+  const [sidePanel, setSidePanel] = useState<SidePanel>(null);
   const [copiedJoinUrl, setCopiedJoinUrl] = useState(false);
-  const [copiedCurl, setCopiedCurl] = useState(false);
-  const [mobilePanel, setMobilePanel] = useState<MobilePanel>("transcript");
+  const [copiedTranscript, setCopiedTranscript] = useState(false);
 
   const handleKick = useCallback(
     async (agentId: string) => {
@@ -79,14 +75,28 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
     } catch {}
   }, [joinUrl]);
 
-  const handleCopyCurl = useCallback(async () => {
-    const curl = `curl -X POST ${joinUrl} \\\n  -H "Content-Type: application/json" \\\n  -d '{"agent_name": "my-agent", "message": "Hello"}'`;
+  const handleExportTranscript = useCallback(async () => {
+    const lines = messages.map(
+      (m) => {
+        const ts = new Date(m.timestamp).toLocaleTimeString("en-US", {
+          hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+        });
+        return `[${ts}] ${m.agent_name}: ${m.content}`;
+      }
+    );
     try {
-      await navigator.clipboard.writeText(curl);
-      setCopiedCurl(true);
-      setTimeout(() => setCopiedCurl(false), 2000);
+      await navigator.clipboard.writeText(lines.join("\n"));
+      setCopiedTranscript(true);
+      setTimeout(() => setCopiedTranscript(false), 2000);
     } catch {}
-  }, [joinUrl]);
+  }, [messages]);
+
+  const togglePanel = useCallback((panel: "people" | "info") => {
+    setSidePanel((prev) => (prev === panel ? null : panel));
+  }, []);
+
+  // Elapsed timer
+  const elapsed = useElapsed(firstMessageAt);
 
   if (isLoading) {
     return (
@@ -95,7 +105,7 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          minHeight: "100vh",
+          height: "100vh",
           background: "var(--room-bg)",
         }}
       >
@@ -135,185 +145,118 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
           color: "var(--room-text)",
         }}
       >
-        {/* Mobile top bar */}
-        <header
+        {/* Main area — transcript or side panel */}
+        <div style={{ flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+          {sidePanel === "people" ? (
+            <AgentSidebar
+              agents={agents}
+              messages={messages}
+              lastSpeakerId={lastSpeakerId}
+              isCreator={isCreator && !isLocked}
+              kickingId={kickingId}
+              onKick={isCreator && creatorToken && !isLocked ? handleKick : undefined}
+              onClose={() => setSidePanel(null)}
+            />
+          ) : sidePanel === "info" ? (
+            <InfoPanel
+              roomCode={roomCode}
+              joinUrl={joinUrl}
+              isLocked={isLocked}
+              copiedJoinUrl={copiedJoinUrl}
+              onCopyJoinUrl={handleCopyJoinUrl}
+              onClose={() => setSidePanel(null)}
+            />
+          ) : (
+            <Transcript messages={messages} isLocked={isLocked} lockReason={lockReason} />
+          )}
+        </div>
+
+        {/* Bottom bar */}
+        <footer
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            padding: "10px 14px",
+            padding: "8px 12px",
+            background: "var(--room-surface)",
+            borderTop: "1px solid var(--room-border)",
             flexShrink: 0,
-            borderBottom: "1px solid var(--room-border)",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 16 }}>
-              <span style={{ fontWeight: 400 }}>Agent</span>
-              <span style={{ fontWeight: 600 }}>Meet</span>
-            </span>
+          {/* Left: timer + code */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+            {elapsed && (
+              <span style={{ color: "var(--room-text-secondary)", fontFamily: "var(--font-mono, monospace)", fontSize: 12 }}>
+                {elapsed}
+              </span>
+            )}
+            <span style={{ color: "var(--room-text-muted)", fontSize: 11 }}>|</span>
             <span
               style={{
-                fontFamily: "monospace",
-                color: "var(--room-text-secondary)",
-                fontSize: 12,
-                background: "var(--room-surface)",
-                padding: "2px 8px",
-                borderRadius: 8,
+                fontFamily: "var(--font-mono, monospace)",
+                color: "var(--room-text-muted)",
+                fontSize: 11,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
               }}
             >
               {roomCode}
             </span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <RoomTimer firstMessageAt={firstMessageAt} />
-            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <span
-                style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: "50%",
-                  background: activeAgentCount > 0 ? "var(--room-green)" : "var(--room-text-muted)",
-                  display: "inline-block",
-                }}
-              />
-              <span style={{ fontSize: 12, color: "var(--room-text-secondary)" }}>
-                {activeAgentCount}
-              </span>
-            </div>
-          </div>
-        </header>
 
-        {isLocked && (
-          <div style={{ padding: "8px 14px 0", flexShrink: 0 }}>
-            <LockedBanner lockReason={lockReason} />
-          </div>
-        )}
-
-        {/* Mobile content area */}
-        <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
-          {mobilePanel === "transcript" && (
-            <Transcript messages={messages} roomCode={roomCode} />
-          )}
-          {mobilePanel === "agents" && (
-            <div style={{ height: "100%", overflowY: "auto", padding: "8px 14px" }}>
-              <AgentSidebar
-                agents={agents}
-                messages={messages}
-                lastSpeakerId={lastSpeakerId}
-                isCreator={isCreator && !isLocked}
-                kickingId={kickingId}
-                onKick={isCreator && creatorToken && !isLocked ? handleKick : undefined}
-              />
-            </div>
-          )}
-          {mobilePanel === "info" && (
-            <div style={{ height: "100%", overflowY: "auto", padding: 14, display: "flex", flexDirection: "column", gap: 12 }}>
-              <InfoCard title="Call info">
-                {!isLocked && <AgentJoinUrl roomCode={roomCode} isLocked={isLocked} />}
-                <InfoRow label="API Endpoint" value={`POST /api/v1/${roomCode}/agent-join`} mono />
-                <InfoRow label="Room State" value={isLocked ? "Locked" : "Active"} />
-              </InfoCard>
-              {!isLocked && (
-                <InfoCard title="Quick connect">
-                  <div style={{ marginBottom: 12 }}>
-                    <span style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: "var(--room-text-muted)", display: "block", marginBottom: 6 }}>
-                      HTTP API
-                    </span>
-                    <div style={{ background: "var(--room-surface-light)", borderRadius: 8, padding: "8px 10px", position: "relative" }}>
-                      <code style={{ fontSize: 10, fontFamily: "monospace", color: "var(--room-text-secondary)", lineHeight: 1.5, display: "block", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
-                        {`curl -X POST ${joinUrl} \\\n  -H "Content-Type: application/json" \\\n  -d '{"agent_name":"my-agent"}'`}
-                      </code>
-                      <button onClick={handleCopyCurl} style={{ position: "absolute", top: 6, right: 6, fontSize: 10, color: copiedCurl ? "var(--room-green)" : "var(--room-primary)", background: "none", border: "none", cursor: "pointer" }}>
-                        {copiedCurl ? "Copied!" : "Copy"}
-                      </button>
-                    </div>
-                  </div>
-                  <div>
-                    <span style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: "var(--room-text-muted)", display: "block", marginBottom: 6 }}>
-                      Join Link
-                    </span>
-                    <button onClick={handleCopyJoinUrl} style={{ width: "100%", background: "var(--room-surface-light)", border: "none", borderRadius: 8, padding: "8px 10px", color: copiedJoinUrl ? "var(--room-green)" : "var(--room-primary)", fontFamily: "monospace", fontSize: 11, cursor: "pointer", textAlign: "left", wordBreak: "break-all" }}>
-                      {copiedJoinUrl ? "Copied to clipboard!" : joinUrl}
-                    </button>
-                  </div>
-                </InfoCard>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Mobile bottom tab bar */}
-        <footer
-          style={{
-            display: "flex",
-            alignItems: "center",
-            flexShrink: 0,
-            borderTop: "1px solid var(--room-border)",
-            background: "var(--room-surface)",
-          }}
-        >
-          <MobileTab
-            label="Chat"
-            icon={
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          {/* Center: end call (creator only) */}
+          {isCreator && creatorToken && !isLocked && (
+            <button
+              onClick={() => setShowLockDialog(true)}
+              style={{
+                background: "var(--room-red)",
+                color: "#fff",
+                border: "none",
+                borderRadius: 24,
+                width: 40,
+                height: 40,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                flexShrink: 0,
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91" />
+                <line x1="23" y1="1" x2="1" y2="23" />
               </svg>
-            }
-            active={mobilePanel === "transcript"}
-            onClick={() => setMobilePanel("transcript")}
-            badge={messages.length > 0 ? messages.length : undefined}
-          />
-          <MobileTab
-            label="Agents"
-            icon={
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            </button>
+          )}
+
+          {/* Right: toggle icons */}
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <BottomIcon
+              active={sidePanel === "people"}
+              badge={activeAgentCount > 0 ? activeAgentCount : undefined}
+              onClick={() => togglePanel("people")}
+              title="People"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                 <circle cx="9" cy="7" r="4" />
                 <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
                 <path d="M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
-            }
-            active={mobilePanel === "agents"}
-            onClick={() => setMobilePanel("agents")}
-            badge={activeAgentCount > 0 ? activeAgentCount : undefined}
-          />
-          <MobileTab
-            label="Info"
-            icon={
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            </BottomIcon>
+            <BottomIcon
+              active={sidePanel === "info"}
+              onClick={() => togglePanel("info")}
+              title="Info"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" />
                 <line x1="12" y1="16" x2="12" y2="12" />
                 <line x1="12" y1="8" x2="12.01" y2="8" />
               </svg>
-            }
-            active={mobilePanel === "info"}
-            onClick={() => setMobilePanel("info")}
-          />
-          {isCreator && creatorToken && !isLocked && (
-            <button
-              onClick={() => setShowLockDialog(true)}
-              style={{
-                flex: 1,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 6,
-                padding: "12px 0",
-                background: "none",
-                border: "none",
-                color: "var(--room-red)",
-                fontSize: 11,
-                fontWeight: 500,
-                cursor: "pointer",
-              }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="23" y1="1" x2="1" y2="23" />
-                <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55" />
-              </svg>
-              End
-            </button>
-          )}
+            </BottomIcon>
+          </div>
         </footer>
 
         <LockConfirmDialog
@@ -337,130 +280,178 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
         color: "var(--room-text)",
       }}
     >
-      {/* TOP BAR */}
-      <header
+      {/* Main area: stage + optional side panel */}
+      <div style={{ flex: 1, display: "flex", minHeight: 0, padding: "8px 8px 0" }}>
+        {/* Stage — the transcript area in a rounded container */}
+        <div
+          style={{
+            flex: 1,
+            minWidth: 0,
+            borderRadius: 12,
+            background: "var(--room-surface)",
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+          }}
+        >
+          <Transcript messages={messages} isLocked={isLocked} lockReason={lockReason} />
+        </div>
+
+        {/* Side panel (togglable) */}
+        {sidePanel && (
+          <div
+            style={{
+              width: 320,
+              flexShrink: 0,
+              marginLeft: 8,
+              borderRadius: 12,
+              background: "var(--room-surface)",
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
+              animation: "slideIn 0.15s ease-out",
+            }}
+          >
+            {sidePanel === "people" ? (
+              <AgentSidebar
+                agents={agents}
+                messages={messages}
+                lastSpeakerId={lastSpeakerId}
+                isCreator={isCreator && !isLocked}
+                kickingId={kickingId}
+                onKick={isCreator && creatorToken && !isLocked ? handleKick : undefined}
+                onClose={() => setSidePanel(null)}
+              />
+            ) : (
+              <InfoPanel
+                roomCode={roomCode}
+                joinUrl={joinUrl}
+                isLocked={isLocked}
+                copiedJoinUrl={copiedJoinUrl}
+                onCopyJoinUrl={handleCopyJoinUrl}
+                onClose={() => setSidePanel(null)}
+              />
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Bottom control bar — Google Meet style */}
+      <footer
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "12px 20px",
+          padding: "10px 16px",
           flexShrink: 0,
-          borderBottom: "1px solid var(--room-border)",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ fontSize: 18 }}>
-            <span style={{ fontWeight: 400, color: "var(--room-text)" }}>Agent</span>
-            <span style={{ fontWeight: 600, color: "var(--room-text)" }}>Meet</span>
-          </span>
-          <span style={{ color: "var(--room-text-muted)", fontSize: 18, fontWeight: 200 }}>|</span>
-          <span style={{ fontFamily: "monospace", color: "var(--room-text-secondary)", fontSize: 14, letterSpacing: "0.5px" }}>
+        {/* Left: timer + code */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
+          {elapsed && (
+            <>
+              <span style={{ color: "var(--room-text-secondary)", fontFamily: "var(--font-mono, monospace)", fontSize: 13 }}>
+                {elapsed}
+              </span>
+              <span style={{ color: "var(--room-text-muted)", fontSize: 13, fontWeight: 200 }}>|</span>
+            </>
+          )}
+          <span style={{ fontFamily: "var(--font-mono, monospace)", color: "var(--room-text-muted)", fontSize: 13 }}>
             {roomCode}
           </span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <RoomTimer firstMessageAt={firstMessageAt} />
-          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--room-surface)", borderRadius: 16, padding: "4px 12px" }}>
-            <span style={{ width: 8, height: 8, borderRadius: "50%", background: activeAgentCount > 0 ? "var(--room-green)" : "var(--room-text-muted)", display: "inline-block" }} />
-            <span style={{ fontSize: 13, color: "var(--room-text-secondary)" }}>
-              {activeAgentCount} agent{activeAgentCount !== 1 ? "s" : ""}
-            </span>
-          </div>
-        </div>
-      </header>
 
-      {isLocked && (
-        <div style={{ padding: "12px 20px 0", flexShrink: 0 }}>
-          <LockedBanner lockReason={lockReason} />
-        </div>
-      )}
-
-      {/* MAIN CONTENT (3 columns) */}
-      <div style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}>
-        {/* LEFT SIDEBAR */}
-        <aside style={{ width: 220, flexShrink: 0, overflowY: "auto", padding: "8px 10px", borderRight: "1px solid var(--room-border)" }}>
-          <AgentSidebar
-            agents={agents}
-            messages={messages}
-            lastSpeakerId={lastSpeakerId}
-            isCreator={isCreator && !isLocked}
-            kickingId={kickingId}
-            onKick={isCreator && creatorToken && !isLocked ? handleKick : undefined}
-          />
-        </aside>
-
-        {/* CENTER */}
-        <main style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-          <Transcript messages={messages} roomCode={roomCode} />
-        </main>
-
-        {/* RIGHT SIDEBAR */}
-        <aside style={{ width: 260, flexShrink: 0, overflowY: "auto", padding: 16, borderLeft: "1px solid var(--room-border)", display: "flex", flexDirection: "column", gap: 12 }}>
-          <InfoCard title="Call info">
-            {!isLocked && <AgentJoinUrl roomCode={roomCode} isLocked={isLocked} />}
-            <InfoRow label="API Endpoint" value={`POST /api/v1/${roomCode}/agent-join`} mono />
-            <InfoRow label="Room State" value={isLocked ? "Locked" : "Active"} />
-          </InfoCard>
-          {!isLocked && (
-            <InfoCard title="Quick connect">
-              <div style={{ marginBottom: 12 }}>
-                <span style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: "var(--room-text-muted)", display: "block", marginBottom: 6 }}>HTTP API</span>
-                <div style={{ background: "var(--room-surface-light)", borderRadius: 8, padding: "8px 10px", position: "relative" }}>
-                  <code style={{ fontSize: 10, fontFamily: "monospace", color: "var(--room-text-secondary)", lineHeight: 1.5, display: "block", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
-                    {`curl -X POST ${joinUrl} \\\n  -H "Content-Type: application/json" \\\n  -d '{"agent_name":"my-agent"}'`}
-                  </code>
-                  <button onClick={handleCopyCurl} style={{ position: "absolute", top: 6, right: 6, fontSize: 10, color: copiedCurl ? "var(--room-green)" : "var(--room-primary)", background: "none", border: "none", cursor: "pointer" }}>
-                    {copiedCurl ? "Copied!" : "Copy"}
-                  </button>
-                </div>
-              </div>
-              <div>
-                <span style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: "var(--room-text-muted)", display: "block", marginBottom: 6 }}>Join Link</span>
-                <button onClick={handleCopyJoinUrl} style={{ width: "100%", background: "var(--room-surface-light)", border: "none", borderRadius: 8, padding: "8px 10px", color: copiedJoinUrl ? "var(--room-green)" : "var(--room-primary)", fontFamily: "monospace", fontSize: 11, cursor: "pointer", textAlign: "left", wordBreak: "break-all" }}>
-                  {copiedJoinUrl ? "Copied to clipboard!" : joinUrl}
-                </button>
-              </div>
-            </InfoCard>
-          )}
-          <InfoCard title="Guardrails">
-            <GuardrailRow label="Auto-pause" value="Enabled" />
-            <GuardrailRow label="Transcript visible" value="Yes" />
-            <GuardrailRow label="Auto-summary" value="On lock" />
-            <GuardrailRow label="Room state" value={isLocked ? "Locked" : "Active"} color={isLocked ? "var(--room-red)" : "var(--room-green)"} />
-          </InfoCard>
-        </aside>
-      </div>
-
-      {/* BOTTOM CONTROL BAR */}
-      <footer style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "12px 20px", background: "var(--room-surface)", borderTop: "1px solid var(--room-border)", flexShrink: 0, gap: 12 }}>
-        <ControlButton
-          icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /><polyline points="10 17 15 12 10 7" /><line x1="15" y1="12" x2="3" y2="12" /></svg>}
-          label="Share"
-          onClick={handleCopyJoinUrl}
-        />
-        <ControlButton
-          icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>}
-          label="Copy URL"
-          onClick={handleCopyJoinUrl}
-        />
-        <ControlButton
-          icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>}
-          label="Settings"
-        />
-        {isCreator && creatorToken && !isLocked && (
-          <button
-            onClick={() => setShowLockDialog(true)}
-            style={{ background: "var(--room-red)", color: "#fff", border: "none", borderRadius: 24, padding: "12px 32px", fontSize: 14, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, transition: "opacity 0.15s", marginLeft: 8 }}
-            onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.9"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
+        {/* Center: controls */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <BottomIcon
+            onClick={handleCopyJoinUrl}
+            title={copiedJoinUrl ? "Copied!" : "Copy join link"}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91" />
-              <line x1="23" y1="1" x2="1" y2="23" />
+            {copiedJoinUrl ? (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--room-green)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                <polyline points="10 17 15 12 10 7" />
+                <line x1="15" y1="12" x2="3" y2="12" />
+              </svg>
+            )}
+          </BottomIcon>
+          <BottomIcon
+            onClick={handleExportTranscript}
+            title={copiedTranscript ? "Copied!" : "Export transcript"}
+          >
+            {copiedTranscript ? (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--room-green)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+              </svg>
+            )}
+          </BottomIcon>
+          {isCreator && creatorToken && !isLocked && (
+            <button
+              onClick={() => setShowLockDialog(true)}
+              style={{
+                background: "var(--room-red)",
+                color: "#fff",
+                border: "none",
+                borderRadius: 24,
+                width: 48,
+                height: 48,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                transition: "opacity 0.15s",
+                marginLeft: 4,
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.85"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
+              title="End call"
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91" />
+                <line x1="23" y1="1" x2="1" y2="23" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {/* Right: panel toggles */}
+        <div style={{ display: "flex", alignItems: "center", gap: 4, flex: 1, justifyContent: "flex-end" }}>
+          <BottomIcon
+            active={sidePanel === "info"}
+            onClick={() => togglePanel("info")}
+            title="Meeting details"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="16" x2="12" y2="12" />
+              <line x1="12" y1="8" x2="12.01" y2="8" />
             </svg>
-            End call
-          </button>
-        )}
+          </BottomIcon>
+          <BottomIcon
+            active={sidePanel === "people"}
+            badge={activeAgentCount > 0 ? activeAgentCount : undefined}
+            onClick={() => togglePanel("people")}
+            title="People"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+          </BottomIcon>
+        </div>
       </footer>
 
       <LockConfirmDialog
@@ -473,104 +464,250 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
   );
 }
 
-/* ===== Helper sub-components ===== */
+/* ===== Sub-components ===== */
 
-function MobileTab({
-  label,
-  icon,
+function BottomIcon({
+  children,
   active,
-  onClick,
   badge,
+  onClick,
+  title,
 }: {
-  label: string;
-  icon: React.ReactNode;
-  active: boolean;
-  onClick: () => void;
+  children: React.ReactNode;
+  active?: boolean;
   badge?: number;
+  onClick?: () => void;
+  title?: string;
 }) {
   return (
     <button
       onClick={onClick}
+      title={title}
       style={{
-        flex: 1,
+        width: 40,
+        height: 40,
+        borderRadius: "50%",
+        background: active ? "var(--room-primary)" : "var(--room-surface-light)",
+        color: active ? "#202124" : "var(--room-text)",
+        border: "none",
+        cursor: "pointer",
         display: "flex",
-        flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        gap: 2,
-        padding: "10px 0",
-        background: "none",
-        border: "none",
-        color: active ? "var(--room-primary)" : "var(--room-text-muted)",
-        cursor: "pointer",
+        transition: "background 0.15s",
         position: "relative",
-        transition: "color 0.15s",
+        flexShrink: 0,
+      }}
+      onMouseEnter={(e) => {
+        if (!active) e.currentTarget.style.background = "#4e5154";
+      }}
+      onMouseLeave={(e) => {
+        if (!active) e.currentTarget.style.background = "var(--room-surface-light)";
       }}
     >
-      <div style={{ position: "relative" }}>
-        {icon}
-        {badge !== undefined && (
-          <span
-            style={{
-              position: "absolute",
-              top: -4,
-              right: -8,
-              background: "var(--room-blue)",
-              color: "#fff",
-              fontSize: 9,
-              fontWeight: 700,
-              borderRadius: 8,
-              padding: "1px 4px",
-              minWidth: 14,
-              textAlign: "center",
-            }}
-          >
-            {badge}
-          </span>
-        )}
-      </div>
-      <span style={{ fontSize: 10, fontWeight: active ? 600 : 400 }}>{label}</span>
+      {children}
+      {badge !== undefined && (
+        <span
+          style={{
+            position: "absolute",
+            top: -2,
+            right: -2,
+            background: active ? "#202124" : "var(--room-primary)",
+            color: active ? "var(--room-primary)" : "#202124",
+            fontSize: 10,
+            fontWeight: 700,
+            borderRadius: 10,
+            padding: "0 5px",
+            minWidth: 16,
+            height: 16,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            lineHeight: 1,
+          }}
+        >
+          {badge}
+        </span>
+      )}
     </button>
   );
 }
 
-function InfoCard({ title, children }: { title: string; children: React.ReactNode }) {
+function InfoPanel({
+  roomCode,
+  joinUrl,
+  isLocked,
+  copiedJoinUrl,
+  onCopyJoinUrl,
+  onClose,
+}: {
+  roomCode: string;
+  joinUrl: string;
+  isLocked: boolean;
+  copiedJoinUrl: boolean;
+  onCopyJoinUrl: () => void;
+  onClose: () => void;
+}) {
   return (
-    <div style={{ background: "var(--room-surface)", borderRadius: 12, padding: 16 }}>
-      <h3 style={{ fontSize: 13, fontWeight: 600, color: "var(--room-text)", margin: "0 0 12px 0" }}>{title}</h3>
-      {children}
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      {/* Header */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "16px 20px",
+          flexShrink: 0,
+        }}
+      >
+        <span style={{ fontSize: 15, fontWeight: 600, color: "var(--room-text)" }}>
+          Meeting details
+        </span>
+        <button
+          onClick={onClose}
+          style={{
+            background: "none",
+            border: "none",
+            color: "var(--room-text-secondary)",
+            cursor: "pointer",
+            padding: 4,
+            borderRadius: 20,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Content */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
+        {!isLocked && (
+          <div style={{ marginBottom: 24 }}>
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+                color: "var(--room-text-muted)",
+                marginBottom: 8,
+              }}
+            >
+              Joining info
+            </div>
+            <div
+              style={{
+                background: "var(--room-surface-light)",
+                borderRadius: 8,
+                padding: "12px 14px",
+              }}
+            >
+              <div style={{ fontSize: 12, color: "var(--room-text-secondary)", marginBottom: 8 }}>
+                Share this link with an agent:
+              </div>
+              <button
+                onClick={onCopyJoinUrl}
+                style={{
+                  width: "100%",
+                  background: "none",
+                  border: "none",
+                  color: copiedJoinUrl ? "var(--room-green)" : "var(--room-primary)",
+                  fontFamily: "var(--font-mono, monospace)",
+                  fontSize: 12,
+                  cursor: "pointer",
+                  textAlign: "left",
+                  wordBreak: "break-all",
+                  padding: 0,
+                  lineHeight: 1.5,
+                }}
+              >
+                {copiedJoinUrl ? "Copied to clipboard!" : joinUrl}
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div>
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 600,
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
+              color: "var(--room-text-muted)",
+              marginBottom: 8,
+            }}
+          >
+            Room
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <InfoRow label="Code" value={roomCode} mono />
+            <InfoRow label="State" value={isLocked ? "Ended" : "Active"} color={isLocked ? "var(--room-red)" : "var(--room-green)"} />
+            <InfoRow label="API" value={`/api/v1/${roomCode}/agent-join`} mono />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
-function InfoRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
-  return (
-    <div style={{ marginBottom: 8 }}>
-      <span style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: "var(--room-text-muted)", display: "block", marginBottom: 4 }}>{label}</span>
-      <span style={{ fontSize: 12, color: "var(--room-text-secondary)", fontFamily: mono ? "monospace" : "inherit", wordBreak: "break-all" }}>{value}</span>
-    </div>
-  );
-}
-
-function GuardrailRow({ label, value, color }: { label: string; value: string; color?: string }) {
+function InfoRow({
+  label,
+  value,
+  mono,
+  color,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+  color?: string;
+}) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0" }}>
       <span style={{ fontSize: 12, color: "var(--room-text-secondary)" }}>{label}</span>
-      <span style={{ fontSize: 12, color: color || "var(--room-text-muted)", fontWeight: 500 }}>{value}</span>
+      <span
+        style={{
+          fontSize: 12,
+          color: color || "var(--room-text-muted)",
+          fontFamily: mono ? "var(--font-mono, monospace)" : "inherit",
+          fontWeight: color ? 600 : 400,
+        }}
+      >
+        {value}
+      </span>
     </div>
   );
 }
 
-function ControlButton({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick?: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      title={label}
-      style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--room-surface-light)", color: "var(--room-text)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.15s" }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = "#4e5154"; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = "var(--room-surface-light)"; }}
-    >
-      {icon}
-    </button>
-  );
+function useElapsed(firstMessageAt?: string): string | null {
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (!firstMessageAt) return;
+    const startTime = new Date(firstMessageAt).getTime();
+
+    function tick() {
+      setElapsed(Math.max(0, Math.floor((Date.now() - startTime) / 1000)));
+    }
+
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [firstMessageAt]);
+
+  if (!firstMessageAt) return null;
+
+  const h = Math.floor(elapsed / 3600);
+  const m = Math.floor((elapsed % 3600) / 60);
+  const s = elapsed % 60;
+
+  if (h > 0) {
+    return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  }
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }

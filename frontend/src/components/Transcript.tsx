@@ -2,7 +2,6 @@
 
 import { useRef, useEffect, useCallback, useState } from "react";
 import type { Message } from "@/lib/types";
-import { getAgentJoinUrl } from "@/lib/api";
 
 const AGENT_COLORS = [
   "#e94560",
@@ -35,14 +34,26 @@ function formatTimestamp(timestamp: string): string {
 
 interface TranscriptProps {
   messages: Message[];
-  roomCode: string;
+  isLocked?: boolean;
+  lockReason?: string;
 }
 
-export function Transcript({ messages, roomCode }: TranscriptProps) {
+function humanizeReason(reason?: string): string {
+  switch (reason) {
+    case "max_messages_reached":
+      return "Maximum message limit reached";
+    case "creator_locked":
+      return "Ended by host";
+    case "inactivity_timeout":
+      return "Ended due to inactivity";
+    default:
+      return reason || "This conversation has ended";
+  }
+}
+
+export function Transcript({ messages, isLocked, lockReason }: TranscriptProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
-  const [copiedTranscript, setCopiedTranscript] = useState(false);
-  const [copiedApi, setCopiedApi] = useState(false);
 
   const handleScroll = useCallback(() => {
     const el = containerRef.current;
@@ -57,275 +68,177 @@ export function Transcript({ messages, roomCode }: TranscriptProps) {
     }
   }, [messages, autoScroll]);
 
-  const handleExportTranscript = useCallback(async () => {
-    const lines = messages.map(
-      (m) =>
-        `[${formatTimestamp(m.timestamp)}] ${m.agent_name}: ${m.content}`
-    );
-    try {
-      await navigator.clipboard.writeText(lines.join("\n"));
-      setCopiedTranscript(true);
-      setTimeout(() => setCopiedTranscript(false), 2000);
-    } catch {
-      // fallback
-    }
-  }, [messages]);
-
-  const handleCopyApiContract = useCallback(async () => {
-    const url = getAgentJoinUrl(roomCode);
-    const contract = `POST ${url}\nContent-Type: application/json\n\n{\n  "agent_name": "my-agent",\n  "message": "Hello from my agent"\n}`;
-    try {
-      await navigator.clipboard.writeText(contract);
-      setCopiedApi(true);
-      setTimeout(() => setCopiedApi(false), 2000);
-    } catch {
-      // fallback
-    }
-  }, [roomCode]);
-
-  const headerButtonStyle: React.CSSProperties = {
-    background: "var(--room-surface-light)",
-    color: "var(--room-text-secondary)",
-    border: "none",
-    borderRadius: 16,
-    padding: "6px 14px",
-    fontSize: 12,
-    cursor: "pointer",
-    transition: "color 0.15s",
-    whiteSpace: "nowrap",
-  };
-
   return (
     <div
+      ref={containerRef}
+      onScroll={handleScroll}
       style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        minHeight: 0,
+        flex: 1,
+        overflowY: "auto",
+        padding: "20px 24px",
       }}
     >
-      {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "14px 20px",
-          borderBottom: "1px solid var(--room-border)",
-          flexShrink: 0,
-        }}
-      >
-        <h2
+      {/* Inline locked banner */}
+      {isLocked && (
+        <div
           style={{
-            fontSize: 15,
-            fontWeight: 600,
-            color: "var(--room-text)",
-            margin: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            padding: "10px 16px",
+            marginBottom: 20,
+            borderRadius: 8,
+            background: "rgba(234, 67, 53, 0.1)",
+            border: "1px solid rgba(234, 67, 53, 0.2)",
           }}
         >
-          Conversation
-        </h2>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button
-            onClick={handleExportTranscript}
-            style={headerButtonStyle}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = "var(--room-text)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = "var(--room-text-secondary)";
-            }}
-          >
-            {copiedTranscript ? "Copied!" : "Export transcript"}
-          </button>
-          <button
-            onClick={handleCopyApiContract}
-            style={headerButtonStyle}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = "var(--room-text)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = "var(--room-text-secondary)";
-            }}
-          >
-            {copiedApi ? "Copied!" : "Copy API contract"}
-          </button>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--room-red)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+          <span style={{ fontSize: 13, color: "var(--room-text-secondary)" }}>
+            {humanizeReason(lockReason)}
+          </span>
         </div>
-      </div>
+      )}
 
-      {/* Messages */}
-      <div
-        ref={containerRef}
-        onScroll={handleScroll}
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          padding: "16px 20px",
-        }}
-      >
-        {messages.length === 0 ? (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              height: "100%",
-              gap: 8,
-            }}
-          >
-            {/* Thinking indicator */}
-            <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-              {[0, 1, 2].map((i) => (
-                <span
-                  key={i}
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: "50%",
-                    background: "var(--room-green)",
-                    display: "inline-block",
-                    animation: `pulse 1.4s ease-in-out ${i * 0.2}s infinite`,
-                  }}
-                />
-              ))}
-            </div>
-            <p
-              style={{
-                color: "var(--room-text-secondary)",
-                fontSize: 14,
-              }}
-            >
-              Waiting for agents to join...
-            </p>
+      {messages.length === 0 ? (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            height: "100%",
+            gap: 8,
+          }}
+        >
+          <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+            {[0, 1, 2].map((i) => (
+              <span
+                key={i}
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: "var(--room-green)",
+                  display: "inline-block",
+                  animation: `pulse 1.4s ease-in-out ${i * 0.2}s infinite`,
+                }}
+              />
+            ))}
           </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {messages.map((msg, idx) => {
-              const color = getAgentColor(msg.agent_id);
-              const isSystemMessage =
-                msg.agent_name === "system" || msg.agent_name === "System";
+          <p style={{ color: "var(--room-text-secondary)", fontSize: 14 }}>
+            Waiting for agents to start talking...
+          </p>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {messages.map((msg, idx) => {
+            const color = getAgentColor(msg.agent_id);
+            const isSystemMessage =
+              msg.agent_name === "system" || msg.agent_name === "System";
+            const prevMsg = idx > 0 ? messages[idx - 1] : null;
+            const isNewSpeaker = !prevMsg || prevMsg.agent_id !== msg.agent_id;
 
-              // Check if this is a new speaker group
-              const prevMsg = idx > 0 ? messages[idx - 1] : null;
-              const isNewSpeaker =
-                !prevMsg || prevMsg.agent_id !== msg.agent_id;
-
-              if (isSystemMessage) {
-                return (
-                  <div
-                    key={msg.message_id}
-                    style={{
-                      display: "flex",
-                      justifyContent: "center",
-                      animation: "fadeIn 0.3s ease-out",
-                    }}
-                  >
-                    <div
-                      style={{
-                        background: "rgba(52, 168, 83, 0.13)",
-                        color: "var(--room-green)",
-                        borderRadius: 20,
-                        padding: "6px 16px",
-                        fontSize: 12,
-                      }}
-                    >
-                      {msg.content}
-                    </div>
-                  </div>
-                );
-              }
-
+            if (isSystemMessage) {
               return (
                 <div
                   key={msg.message_id}
                   style={{
                     display: "flex",
-                    gap: 12,
-                    alignItems: "flex-start",
-                    marginTop: !isNewSpeaker ? -8 : 0,
+                    justifyContent: "center",
                     animation: "fadeIn 0.3s ease-out",
                   }}
                 >
-                  {/* Avatar - only show for new speaker */}
-                  {isNewSpeaker ? (
-                    <div
-                      style={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: "50%",
-                        backgroundColor: color,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: 13,
-                        fontWeight: 700,
-                        color: "#fff",
-                        flexShrink: 0,
-                        marginTop: 2,
-                      }}
-                    >
-                      {msg.agent_name.charAt(0).toUpperCase()}
-                    </div>
-                  ) : (
-                    <div style={{ width: 32, flexShrink: 0 }} />
-                  )}
-
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    {/* Name + timestamp - only for new speaker */}
-                    {isNewSpeaker && (
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "baseline",
-                          gap: 8,
-                          marginBottom: 4,
-                        }}
-                      >
-                        <span
-                          style={{
-                            color,
-                            fontSize: 13,
-                            fontWeight: 600,
-                          }}
-                        >
-                          {msg.agent_name}
-                        </span>
-                        <span
-                          style={{
-                            color: "var(--room-text-muted)",
-                            fontSize: 11,
-                          }}
-                        >
-                          {formatTimestamp(msg.timestamp)}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Message bubble */}
-                    <div
-                      style={{
-                        background: "var(--room-surface-light)",
-                        padding: "10px 14px",
-                        borderRadius: isNewSpeaker
-                          ? "4px 12px 12px 12px"
-                          : "12px",
-                        fontSize: 14,
-                        color: "var(--room-text)",
-                        lineHeight: 1.5,
-                        whiteSpace: "pre-wrap",
-                        wordBreak: "break-word",
-                      }}
-                    >
-                      {msg.content}
-                    </div>
+                  <div
+                    style={{
+                      background: "rgba(52, 168, 83, 0.13)",
+                      color: "var(--room-green)",
+                      borderRadius: 20,
+                      padding: "6px 16px",
+                      fontSize: 12,
+                    }}
+                  >
+                    {msg.content}
                   </div>
                 </div>
               );
-            })}
-          </div>
-        )}
-      </div>
+            }
+
+            return (
+              <div
+                key={msg.message_id}
+                style={{
+                  display: "flex",
+                  gap: 12,
+                  alignItems: "flex-start",
+                  marginTop: !isNewSpeaker ? -8 : 0,
+                  animation: "fadeIn 0.3s ease-out",
+                }}
+              >
+                {isNewSpeaker ? (
+                  <div
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: "50%",
+                      backgroundColor: color,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: "#fff",
+                      flexShrink: 0,
+                      marginTop: 2,
+                    }}
+                  >
+                    {msg.agent_name.charAt(0).toUpperCase()}
+                  </div>
+                ) : (
+                  <div style={{ width: 32, flexShrink: 0 }} />
+                )}
+
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  {isNewSpeaker && (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "baseline",
+                        gap: 8,
+                        marginBottom: 4,
+                      }}
+                    >
+                      <span style={{ color, fontSize: 13, fontWeight: 600 }}>
+                        {msg.agent_name}
+                      </span>
+                      <span style={{ color: "var(--room-text-muted)", fontSize: 11 }}>
+                        {formatTimestamp(msg.timestamp)}
+                      </span>
+                    </div>
+                  )}
+                  <div
+                    style={{
+                      background: "var(--room-surface-light)",
+                      padding: "10px 14px",
+                      borderRadius: isNewSpeaker ? "4px 12px 12px 12px" : "12px",
+                      fontSize: 14,
+                      color: "var(--room-text)",
+                      lineHeight: 1.5,
+                      whiteSpace: "pre-wrap",
+                      wordBreak: "break-word",
+                    }}
+                  >
+                    {msg.content}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
