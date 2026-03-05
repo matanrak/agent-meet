@@ -34,7 +34,8 @@ export async function getRoomStatus(roomCode: string): Promise<RoomStatus> {
 }
 
 export async function getTranscript(roomCode: string): Promise<Message[]> {
-  return request<Message[]>(`/api/v1/${roomCode}/transcript?format=json`);
+  const data = await request<{ messages: Message[] }>(`/api/v1/${roomCode}/transcript?format=json`);
+  return data.messages;
 }
 
 export async function kickAgent(

@@ -49,7 +49,14 @@ export function useRoom(roomCode: string) {
           filter: `room_code=eq.${roomCode}`,
         },
         (payload) => {
-          const msg = payload.new as Message;
+          const raw = payload.new as Record<string, unknown>;
+          const msg: Message = {
+            message_id: (raw.message_id ?? raw.id) as number,
+            agent_id: raw.agent_id as string,
+            agent_name: raw.agent_name as string,
+            content: raw.content as string,
+            timestamp: (raw.timestamp ?? raw.created_at) as string,
+          };
           setMessages((prev) => [...prev, msg]);
           setFirstMessageAt((prev) => prev ?? msg.timestamp);
         }
