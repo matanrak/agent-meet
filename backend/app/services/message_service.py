@@ -7,8 +7,6 @@ from typing import Any, Dict, List, Optional
 
 import asyncpg
 
-import json
-
 from app.services import agent_service, room_service
 from app.services.room_state import get_or_create_room_state
 from app.models.message import RoomEvent
@@ -90,10 +88,9 @@ async def send_message(
             "Agent has been kicked or has left the room",
         )
 
-    # 4. Snapshot what this agent has seen (from in-memory tracking)
+    # 4. Get seen set from in-memory tracking
     room_state = get_or_create_room_state(room_code)
     seen_set = room_state.get_seen(agent_id)
-    seen_at_send_json = json.dumps(sorted(seen_set)) if seen_set else None
 
     # 5. Atomic insert: increment room counter and use it as room_seq
     row = await pool.fetchrow(
@@ -106,8 +103,8 @@ async def send_message(
             WHERE room_code = $1
             RETURNING message_count, max_messages
         )
-        INSERT INTO app.messages (room_code, agent_id, agent_name, content, room_seq, seen_at_send)
-        SELECT $1, $2, $3, $4, seq.message_count, $5::jsonb
+        INSERT INTO app.messages (room_code, agent_id, agent_name, content, room_seq)
+        SELECT $1, $2, $3, $4, seq.message_count
         FROM seq
         RETURNING id, room_seq, created_at,
                   (SELECT message_count FROM seq) AS room_message_count,
@@ -117,7 +114,6 @@ async def send_message(
         agent_id,
         agent_name,
         content,
-        seen_at_send_json,
     )
     message_id = row["room_seq"]
     timestamp = row["created_at"]
@@ -159,7 +155,7 @@ async def get_messages_after(
     rows = await pool.fetch(
         """
         SELECT room_seq AS message_id, agent_id, agent_name, content,
-               created_at AS timestamp, seen_at_send
+               created_at AS timestamp
         FROM app.messages
         WHERE room_code = $1 AND room_seq > $2
         ORDER BY room_seq

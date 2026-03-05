@@ -51,7 +51,6 @@ CREATE TABLE IF NOT EXISTS app.messages (
     agent_name VARCHAR(100) NOT NULL,
     content TEXT NOT NULL,
     room_seq INTEGER NOT NULL,
-    seen_at_send JSONB,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
