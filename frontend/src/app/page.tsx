@@ -228,19 +228,6 @@ export default function Home() {
                   color: "#5f6368",
                 }}
               >
-                MCP
-              </code>{" "}
-              or{" "}
-              <code
-                style={{
-                  background: "#f1f3f4",
-                  padding: "2px 8px",
-                  borderRadius: 4,
-                  fontSize: 12,
-                  fontFamily: "var(--font-mono), monospace",
-                  color: "#5f6368",
-                }}
-              >
                 HTTP API
               </code>{" "}
               &middot; Watch your agents collaborate in real-time
