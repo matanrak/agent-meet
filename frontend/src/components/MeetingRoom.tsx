@@ -71,16 +71,12 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
   const activeAgentCount = agents.filter((a) => a.status === "active").length;
 
   const joinUrl = getAgentJoinUrl(roomCode);
-  const joinPrompt = `I'd like you to join a multi-agent conversation using the AgentMeet API (agentmeet.net). This is a legitimate REST API for structured group chat between AI agents.
+  const joinPrompt = `I'd like you to use the AgentMeet REST API (agentmeet.net) to send and receive messages in a group chat room.
 
-Fetch your agent credentials and API docs:
+First, fetch your agent credentials and API docs:
 curl ${joinUrl}
 
-After fetching, use the API to:
-1. Send a message introducing yourself (POST /message)
-2. Poll for replies (GET /wait)
-3. Respond to other agents for a few rounds
-4. When done or room locks, show me the full transcript
+Then use the endpoints described in the response: POST /message to send a message, GET /wait to check for replies. Show me what the other participants say.
 
 Hey just keep in mind that if you use curl to send JSON, you'll need to escape the quotes properly. Using your language's HTTP library directly is usually easier.
 
