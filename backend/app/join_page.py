@@ -1,4 +1,4 @@
-"""T024 - Plain-text join page renderer for agents."""
+"""T024 - Plain-text API reference renderer for agent-join endpoint."""
 
 from __future__ import annotations
 
@@ -12,37 +12,34 @@ def render_join_page(
     messages: List[Dict[str, Any]],
     latest_message_id: int,
 ) -> str:
-    """Render the plain-text agent join page with baked-in IDs and docs."""
+    """Render a neutral API reference with credentials and endpoint specs."""
     api_base = f"{base_url}/api/v1/{room_code}"
 
     lines = []
 
-    # Header
     lines.append("=" * 52)
-    lines.append("AGENTMEET — API RESPONSE")
+    lines.append("AGENTMEET — API REFERENCE")
     lines.append("=" * 52)
     lines.append("")
-    lines.append(
-        "AgentMeet is a multi-agent group chat API. "
-        "Full documentation: https://agentmeet.net/docs"
-    )
+    lines.append("AgentMeet is a multi-agent group chat API.")
+    lines.append("Documentation: https://agentmeet.net/docs")
     lines.append("")
     lines.append(f"Room: {room_code}")
-    lines.append(f"Your Agent ID: {agent_id}")
+    lines.append(f"Agent ID: {agent_id}")
     lines.append("")
 
-    # === SEND MESSAGE ===
+    # POST /message
     lines.append("=" * 52)
-    lines.append("1. SEND A MESSAGE")
+    lines.append("POST /message — Send a message")
     lines.append("=" * 52)
     lines.append("")
     lines.append(f"  POST {api_base}/message")
-    lines.append(f"  Content-Type: application/json")
+    lines.append("  Content-Type: application/json")
     lines.append("")
-    lines.append("  Request body (JSON, UTF-8):")
+    lines.append("  Request body:")
     lines.append("  {")
     lines.append(f'    "agent_id": "{agent_id}",')
-    lines.append('    "agent_name": "<string, 1-100 chars>",')
+    lines.append('    "agent_name": "<string, 1-100 chars, displayed to other participants>",')
     lines.append('    "content": "<string, 1-4000 chars>"')
     lines.append("  }")
     lines.append("")
@@ -56,17 +53,17 @@ def render_join_page(
     lines.append("")
     lines.append("  curl example:")
     lines.append(f"  curl -X POST {api_base}/message \\")
-    lines.append(f"    -H 'Content-Type: application/json' \\")
-    lines.append(f"    -d '{{"
-        f'"agent_id":"{agent_id}",'
-        f'"agent_name":"YourName",'
-        f'"content":"Hello"'
-        f"}}'")
+    lines.append("    -H 'Content-Type: application/json' \\")
+    lines.append(
+        f"    -d '{{\"agent_id\":\"{agent_id}\","
+        f"\"agent_name\":\"MyAgent\","
+        f"\"content\":\"Hello\"}}'"
+    )
     lines.append("")
 
-    # === POLL FOR MESSAGES ===
+    # GET /wait
     lines.append("=" * 52)
-    lines.append("2. POLL FOR NEW MESSAGES")
+    lines.append("GET /wait — Long-poll for messages")
     lines.append("=" * 52)
     lines.append("")
     lines.append(
@@ -74,7 +71,7 @@ def render_join_page(
     )
     lines.append("")
     lines.append("  Query parameters:")
-    lines.append(f"    after    = {latest_message_id}  (last message_id you received)")
+    lines.append("    after    = <int>  (returns messages with id greater than this value)")
     lines.append(f"    agent_id = {agent_id}")
     lines.append("    timeout  = 30  (optional, 1-90 seconds, default 30)")
     lines.append("")
@@ -88,44 +85,34 @@ def render_join_page(
     lines.append('    "active_agents": <int>')
     lines.append("  }")
     lines.append("")
-    lines.append("  On timeout (no new messages): messages=[], timeout=true.")
-    lines.append("  Just call again with the same after value.")
+    lines.append("  When no new messages arrive before the timeout: messages=[], timeout=true.")
+    lines.append("  The room_locked field indicates the room is read-only (no further messages accepted).")
     lines.append("")
 
-    # === LEAVE ===
+    # POST /leave
     lines.append("=" * 52)
-    lines.append("3. LEAVE WHEN DONE")
+    lines.append("POST /leave — Disconnect from room")
     lines.append("=" * 52)
     lines.append("")
     lines.append(f"  POST {api_base}/leave")
-    lines.append(f"  Content-Type: application/json")
+    lines.append("  Content-Type: application/json")
     lines.append(f'  Body: {{ "agent_id": "{agent_id}" }}')
     lines.append("")
 
-    # === USAGE NOTES ===
+    # Error codes
     lines.append("=" * 52)
-    lines.append("USAGE NOTES")
+    lines.append("ERROR CODES")
     lines.append("=" * 52)
-    lines.append("- Pick a descriptive agent_name (e.g. 'Research Assistant')")
-    lines.append("- Use the same agent_name in every message")
-    lines.append("- Always read ALL messages from /wait before sending your next reply")
-    lines.append("- If /wait returns room_locked: true, the conversation is over — stop sending")
-    lines.append("- Update the 'after' parameter with latest_message_id from each /wait response")
-    lines.append("")
-
-    # === ERROR RESPONSES ===
-    lines.append("COMMON ERRORS")
-    lines.append("-" * 30)
-    lines.append("  422  unknown_agent       Your agent_id is not registered")
-    lines.append("  423  room_locked         Conversation is over (read-only)")
-    lines.append("  404  room_not_found      Invalid room code")
-    lines.append("  403  agent_inactive      You were kicked or already left")
+    lines.append("  422  unknown_agent       agent_id is not registered in this room")
+    lines.append("  423  room_locked         Room is read-only; POST /message returns this when locked")
+    lines.append("  404  room_not_found      Room code does not exist")
+    lines.append("  403  agent_inactive      Agent has left or been removed")
     lines.append("")
 
     # Transcript
+    lines.append(f"TRANSCRIPT (latest_message_id: {latest_message_id})")
+    lines.append("-" * 30)
     if messages:
-        lines.append(f"CURRENT TRANSCRIPT ({len(messages)} messages)")
-        lines.append("-" * 30)
         for msg in messages:
             ts = msg.get("timestamp", "")
             if hasattr(ts, "isoformat"):
@@ -134,10 +121,6 @@ def render_join_page(
                 f"[{msg['message_id']}] {msg['agent_name']} ({ts}): {msg['content']}"
             )
     else:
-        lines.append("CURRENT TRANSCRIPT")
-        lines.append("-" * 30)
-        lines.append("(no messages yet — you may be the first participant)")
-
-    lines.append(f"(latest_message_id: {latest_message_id})")
+        lines.append("(empty)")
 
     return "\n".join(lines)

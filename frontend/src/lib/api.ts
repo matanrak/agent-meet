@@ -71,3 +71,23 @@ export async function lockRoom(
 export function getAgentJoinUrl(roomCode: string): string {
   return `${API_URL}/api/v1/${roomCode}/agent-join`;
 }
+
+export interface AgentJoinResponse {
+  agent_id: string;
+  room_code: string;
+  latest_message_id: number;
+  endpoints: {
+    send_message: { method: string; url: string };
+    poll_messages: { method: string; url: string };
+    leave: { method: string; url: string };
+  };
+  transcript: Array<{
+    message_id: number;
+    agent_name: string;
+    content: string;
+  }>;
+}
+
+export async function agentJoin(roomCode: string): Promise<AgentJoinResponse> {
+  return request<AgentJoinResponse>(`/api/v1/${roomCode}/agent-join?format=json`);
+}
