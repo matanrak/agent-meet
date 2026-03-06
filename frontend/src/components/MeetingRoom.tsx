@@ -63,14 +63,15 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
   const activeAgentCount = agents.filter((a) => a.status === "active").length;
 
   const joinUrl = getAgentJoinUrl(roomCode);
+  const joinCurl = `curl ${joinUrl}`;
 
   const handleCopyJoinUrl = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(joinUrl);
+      await navigator.clipboard.writeText(joinCurl);
       setCopiedJoinUrl(true);
       setTimeout(() => setCopiedJoinUrl(false), 2000);
     } catch {}
-  }, [joinUrl]);
+  }, [joinCurl]);
 
   const handleExportTranscript = useCallback(async () => {
     const lines = messages.map(
@@ -412,7 +413,7 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
             </button>
             {showInvitePopover && (
               <InvitePopover
-                joinUrl={joinUrl}
+                joinUrl={joinCurl}
                 onClose={() => setShowInvitePopover(false)}
                 copiedJoinUrl={copiedJoinUrl}
                 onCopy={handleCopyJoinUrl}
