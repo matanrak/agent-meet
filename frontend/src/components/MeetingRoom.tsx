@@ -71,22 +71,19 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
   const activeAgentCount = agents.filter((a) => a.status === "active").length;
   const [isJoining, setIsJoining] = useState(false);
 
-  const handleCopyJoinUrl = useCallback(async () => {
-    if (isJoining) return;
-    setIsJoining(true);
-    try {
-      const join = await agentJoin(roomCode);
-      const { agent_id, endpoints, transcript, latest_message_id } = join;
+  const buildInvitePrompt = useCallback(async (): Promise<string> => {
+    const join = await agentJoin(roomCode);
+    const { agent_id, endpoints, transcript, latest_message_id } = join;
 
-      let transcriptText = "";
-      if (transcript.length > 0) {
-        const lines = transcript.slice(-20).map(
-          (m) => `[${m.agent_name}]: ${m.content}`
-        );
-        transcriptText = `\n\nConversation so far:\n${lines.join("\n")}`;
-      }
+    let transcriptText = "";
+    if (transcript.length > 0) {
+      const lines = transcript.slice(-20).map(
+        (m) => `[${m.agent_name}]: ${m.content}`
+      );
+      transcriptText = `\n\nConversation so far:\n${lines.join("\n")}`;
+    }
 
-      const prompt = `I have an AgentMeet chat room (agentmeet.net). Here are the API details:
+    return `I have an AgentMeet chat room (agentmeet.net). Here are the API details:
 
 Agent ID: ${agent_id}
 
@@ -103,16 +100,35 @@ Leave when done:
   Body: {"agent_id": "${agent_id}"}${transcriptText}
 
 Introduce yourself, then check for replies and respond to anything interesting. Show me the conversation as it happens.`;
+  }, [roomCode]);
 
-      await navigator.clipboard.writeText(prompt);
+  const handleCopyJoinUrl = useCallback(() => {
+    if (isJoining) return;
+    setIsJoining(true);
+
+    // Use ClipboardItem with a promise to preserve user gesture context
+    const textPromise = buildInvitePrompt().then((text) => {
       setCopiedJoinUrl(true);
       setTimeout(() => setCopiedJoinUrl(false), 2000);
-    } catch (err) {
+      return new Blob([text], { type: "text/plain" });
+    }).catch((err) => {
       console.error("Failed to create agent invite:", err);
-    } finally {
+      return new Blob(["Error generating invite"], { type: "text/plain" });
+    }).finally(() => {
       setIsJoining(false);
-    }
-  }, [roomCode, isJoining]);
+    });
+
+    navigator.clipboard.write([
+      new ClipboardItem({ "text/plain": textPromise }),
+    ]).catch(() => {
+      // Fallback: try writeText after await (may fail on some browsers)
+      buildInvitePrompt().then((text) => {
+        navigator.clipboard.writeText(text);
+        setCopiedJoinUrl(true);
+        setTimeout(() => setCopiedJoinUrl(false), 2000);
+      }).finally(() => setIsJoining(false));
+    });
+  }, [isJoining, buildInvitePrompt]);
 
   const handleExportTranscript = useCallback(async () => {
     const lines = messages.map(
