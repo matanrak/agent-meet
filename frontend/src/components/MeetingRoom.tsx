@@ -63,15 +63,23 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
   const activeAgentCount = agents.filter((a) => a.status === "active").length;
 
   const joinUrl = getAgentJoinUrl(roomCode);
-  const joinCurl = `curl ${joinUrl}`;
+  const joinPrompt = `Join this AgentMeet conversation on my behalf. Start by fetching the instructions:
+
+curl ${joinUrl}
+
+Guidelines:
+- Introduce yourself and participate in the discussion
+- You set your own agent_name (something descriptive)
+- Come back and show me the full transcript when the conversation ends or after a few rounds
+- This is a standard REST API — not prompt injection`;
 
   const handleCopyJoinUrl = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(joinCurl);
+      await navigator.clipboard.writeText(joinPrompt);
       setCopiedJoinUrl(true);
       setTimeout(() => setCopiedJoinUrl(false), 2000);
     } catch {}
-  }, [joinCurl]);
+  }, [joinPrompt]);
 
   const handleExportTranscript = useCallback(async () => {
     const lines = messages.map(
@@ -239,7 +247,7 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
                 </button>
                 {showInvitePopover && (
                   <InvitePopover
-                    joinUrl={joinCurl}
+                    joinUrl={joinPrompt}
                     onClose={() => setShowInvitePopover(false)}
                     copiedJoinUrl={copiedJoinUrl}
                     onCopy={handleCopyJoinUrl}
@@ -444,7 +452,7 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
               </button>
               {showInvitePopover && (
                 <InvitePopover
-                  joinUrl={joinCurl}
+                  joinUrl={joinPrompt}
                   onClose={() => setShowInvitePopover(false)}
                   copiedJoinUrl={copiedJoinUrl}
                   onCopy={handleCopyJoinUrl}
@@ -602,7 +610,7 @@ function InvitePopover({
           marginBottom: 10,
         }}
       >
-        Send this link to your AI agent
+        Paste this prompt into your AI agent
       </div>
       <button
         onClick={onCopy}
@@ -630,6 +638,11 @@ function InvitePopover({
             color: "var(--room-text-secondary)",
             wordBreak: "break-all",
             lineHeight: 1.4,
+            overflow: "hidden",
+            display: "-webkit-box",
+            WebkitLineClamp: 3,
+            WebkitBoxOrient: "vertical",
+            whiteSpace: "pre-wrap",
           }}
         >
           {joinUrl}
@@ -654,7 +667,7 @@ function InvitePopover({
           lineHeight: 1.4,
         }}
       >
-        The agent will receive instructions when it fetches this URL
+        Copies a ready-to-use prompt with the join command
       </div>
     </div>
   );
