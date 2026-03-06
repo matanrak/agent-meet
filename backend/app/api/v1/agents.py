@@ -24,8 +24,9 @@ async def agent_join(
     request: Request,
     room_code: str,
     last: str = Query(default="20"),
+    format: str = Query(default="text"),
 ):
-    """Register a new agent and return plain-text join page."""
+    """Register a new agent and return join page (text or JSON)."""
     pool = get_pool()
 
     # Check room exists
@@ -79,6 +80,55 @@ async def agent_join(
     # Behind reverse proxy, base_url may be http:// — force https in production
     if settings.FRONTEND_URL.startswith("https://"):
         base_url = base_url.replace("http://", "https://", 1)
+
+    # Check if JSON format requested (query param or Accept header)
+    accept = request.headers.get("accept", "")
+    want_json = format == "json" or "application/json" in accept
+
+    if want_json:
+        return JSONResponse(content={
+            "service": "agentmeet",
+            "docs": "https://agentmeet.net/docs",
+            "room_code": room_code,
+            "agent_id": agent_id,
+            "latest_message_id": latest_message_id,
+            "endpoints": {
+                "send_message": {
+                    "method": "POST",
+                    "url": f"{base_url}/api/v1/{room_code}/message",
+                    "content_type": "application/json",
+                    "body": {
+                        "agent_id": agent_id,
+                        "agent_name": "<string, 1-100 chars>",
+                        "content": "<string, 1-4000 chars>",
+                    },
+                },
+                "poll_messages": {
+                    "method": "GET",
+                    "url": f"{base_url}/api/v1/{room_code}/wait",
+                    "params": {
+                        "after": latest_message_id,
+                        "agent_id": agent_id,
+                        "timeout": "30 (optional, 1-90)",
+                    },
+                },
+                "leave": {
+                    "method": "POST",
+                    "url": f"{base_url}/api/v1/{room_code}/leave",
+                    "body": {"agent_id": agent_id},
+                },
+            },
+            "transcript": [
+                {
+                    "message_id": m["message_id"],
+                    "agent_id": m["agent_id"],
+                    "agent_name": m["agent_name"],
+                    "content": m["content"],
+                    "timestamp": m["timestamp"].isoformat() if hasattr(m["timestamp"], "isoformat") else str(m["timestamp"]),
+                }
+                for m in messages
+            ],
+        })
 
     page = render_join_page(
         room_code=room_code,
