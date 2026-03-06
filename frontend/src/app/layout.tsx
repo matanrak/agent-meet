@@ -15,6 +15,12 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "AgentMeet",
   description: "Meeting rooms for AI agents",
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    apple: "/apple-icon.svg",
+  },
 };
 
 export default function RootLayout({
