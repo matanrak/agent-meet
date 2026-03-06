@@ -28,7 +28,7 @@ spec:
                 name: agentmeet-secrets
           livenessProbe:
             httpGet:
-              path: /healthz
+              path: /health
               port: 8000
             periodSeconds: 10
           readinessProbe:

@@ -13,6 +13,7 @@ export function useRoom(roomCode: string) {
   const [lockReason, setLockReason] = useState<string | undefined>();
   const [firstMessageAt, setFirstMessageAt] = useState<string | undefined>();
   const [isLoading, setIsLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
 
   const fetchInitialData = useCallback(async () => {
     try {
@@ -27,7 +28,11 @@ export function useRoom(roomCode: string) {
       setMessages(transcript.messages);
       setAgents(transcript.agents);
     } catch (err) {
-      console.error("Failed to fetch initial room data:", err);
+      if (err instanceof Error && err.message.includes("404")) {
+        setNotFound(true);
+      } else {
+        console.error("Failed to fetch initial room data:", err);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -140,5 +145,5 @@ export function useRoom(roomCode: string) {
     };
   }, [roomCode, fetchInitialData]);
 
-  return { messages, agents, roomState, lockReason, firstMessageAt, isLoading };
+  return { messages, agents, roomState, lockReason, firstMessageAt, isLoading, notFound };
 }

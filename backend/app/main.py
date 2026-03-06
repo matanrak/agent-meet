@@ -7,10 +7,13 @@ import logging
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
+import json
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.requests import ClientDisconnect
 
 from app.config import settings
 from app.db import close_pool, get_pool, init_pool
@@ -57,8 +60,8 @@ app.add_middleware(
 )
 
 
-@app.get("/healthz")
-async def healthz() -> dict:
+@app.get("/health")
+async def health() -> dict:
     """Basic health check."""
     return {"status": "ok"}
 
@@ -85,6 +88,26 @@ async def readyz():
 @app.exception_handler(RequestValidationError)
 async def validation_error_handler(request: Request, exc: RequestValidationError):
     """Return agent-friendly validation errors instead of raw Pydantic output."""
+    # Check if this is a JSON decode error (common with shell escaping)
+    is_json_error = any("JSON" in str(err.get("msg", "")) for err in exc.errors())
+
+    if is_json_error:
+        try:
+            raw = await request.body()
+            body_preview = raw.decode("utf-8", errors="replace")[:300]
+        except (ClientDisconnect, Exception):
+            body_preview = "(could not read body)"
+
+        return JSONResponse(
+            status_code=422,
+            content={
+                "error": "json_parse_error",
+                "message": "Could not parse request body as JSON. This usually happens when shell escaping mangles the JSON in curl commands.",
+                "hint": "Use double quotes for the -d flag and escape inner quotes: curl -d \"{\\\"agent_id\\\": ...}\" or use a heredoc: curl -d @- <<< '{\"agent_id\": ...}'",
+                "received_body": body_preview,
+            },
+        )
+
     missing = []
     invalid = []
     for err in exc.errors():
