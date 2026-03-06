@@ -85,6 +85,9 @@ export function Transcript({ messages, isLocked, lockReason, onCopyJoinUrl, copi
       {isLocked && (
         <div
           style={{
+            position: "sticky",
+            top: -20,
+            zIndex: 10,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -92,8 +95,9 @@ export function Transcript({ messages, isLocked, lockReason, onCopyJoinUrl, copi
             padding: "10px 16px",
             marginBottom: 20,
             borderRadius: 8,
-            background: "rgba(234, 67, 53, 0.1)",
+            background: "rgba(234, 67, 53, 0.15)",
             border: "1px solid rgba(234, 67, 53, 0.2)",
+            backdropFilter: "blur(8px)",
           }}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--room-red)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

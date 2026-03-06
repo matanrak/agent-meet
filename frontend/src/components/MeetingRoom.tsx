@@ -204,34 +204,50 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
 
           {/* Center: invite + end call */}
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ position: "relative" }}>
-              <button
-                data-invite-toggle
-                onClick={() => setShowInvitePopover((v) => !v)}
+            {isLocked ? (
+              <span
                 style={{
-                  background: "var(--room-blue)",
+                  background: "var(--room-red)",
                   color: "#fff",
-                  border: "none",
                   borderRadius: 24,
                   padding: "6px 14px",
                   fontSize: 12,
                   fontWeight: 500,
-                  cursor: "pointer",
                   whiteSpace: "nowrap",
                 }}
               >
-                Invite
-              </button>
-              {showInvitePopover && (
-                <InvitePopover
-                  joinUrl={joinUrl}
-                  onClose={() => setShowInvitePopover(false)}
-                  copiedJoinUrl={copiedJoinUrl}
-                  onCopy={handleCopyJoinUrl}
-                  mobile
-                />
-              )}
-            </div>
+                Call ended
+              </span>
+            ) : (
+              <div style={{ position: "relative" }}>
+                <button
+                  data-invite-toggle
+                  onClick={() => setShowInvitePopover((v) => !v)}
+                  style={{
+                    background: "var(--room-blue)",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 24,
+                    padding: "6px 14px",
+                    fontSize: 12,
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Invite
+                </button>
+                {showInvitePopover && (
+                  <InvitePopover
+                    joinUrl={joinCurl}
+                    onClose={() => setShowInvitePopover(false)}
+                    copiedJoinUrl={copiedJoinUrl}
+                    onCopy={handleCopyJoinUrl}
+                    mobile
+                  />
+                )}
+              </div>
+            )}
             {isCreator && creatorToken && !isLocked && (
               <button
                 onClick={() => setShowLockDialog(true)}
@@ -389,37 +405,53 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
 
         {/* Center: controls */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, position: "relative" }}>
-          <div style={{ position: "relative" }}>
-            <button
-              ref={inviteButtonRef}
-              data-invite-toggle
-              onClick={() => setShowInvitePopover((v) => !v)}
+          {isLocked ? (
+            <span
               style={{
-                background: "var(--room-blue)",
+                background: "var(--room-red)",
                 color: "#fff",
-                border: "none",
                 borderRadius: 24,
                 padding: "8px 16px",
                 fontSize: 13,
                 fontWeight: 500,
-                cursor: "pointer",
-                transition: "opacity 0.15s",
                 whiteSpace: "nowrap",
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.85"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
             >
-              Invite Agent
-            </button>
-            {showInvitePopover && (
-              <InvitePopover
-                joinUrl={joinCurl}
-                onClose={() => setShowInvitePopover(false)}
-                copiedJoinUrl={copiedJoinUrl}
-                onCopy={handleCopyJoinUrl}
-              />
-            )}
-          </div>
+              Call ended
+            </span>
+          ) : (
+            <div style={{ position: "relative" }}>
+              <button
+                ref={inviteButtonRef}
+                data-invite-toggle
+                onClick={() => setShowInvitePopover((v) => !v)}
+                style={{
+                  background: "var(--room-blue)",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 24,
+                  padding: "8px 16px",
+                  fontSize: 13,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  transition: "opacity 0.15s",
+                  whiteSpace: "nowrap",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.85"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
+              >
+                Invite Agent
+              </button>
+              {showInvitePopover && (
+                <InvitePopover
+                  joinUrl={joinCurl}
+                  onClose={() => setShowInvitePopover(false)}
+                  copiedJoinUrl={copiedJoinUrl}
+                  onCopy={handleCopyJoinUrl}
+                />
+              )}
+            </div>
+          )}
           <BottomIcon
             onClick={handleExportTranscript}
             title={copiedTranscript ? "Copied!" : "Export transcript"}
