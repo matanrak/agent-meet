@@ -8,7 +8,7 @@ import { useIsMobile } from "@/hooks/useIsMobile";
 import { Transcript } from "./Transcript";
 import { AgentSidebar } from "./AgentSidebar";
 import { LockConfirmDialog } from "./LockConfirmDialog";
-import { agentJoin, kickAgent, lockRoom } from "@/lib/api";
+import { kickAgent, lockRoom } from "@/lib/api";
 
 interface MeetingRoomProps {
   roomCode: string;
@@ -69,66 +69,36 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
   }, [roomCode, creatorToken]);
 
   const activeAgentCount = agents.filter((a) => a.status === "active").length;
-  const [isJoining, setIsJoining] = useState(false);
 
-  const buildInvitePrompt = useCallback(async (): Promise<string> => {
-    const join = await agentJoin(roomCode);
-    const { agent_id, endpoints, transcript, latest_message_id } = join;
+  const apiBase = `${process.env.NEXT_PUBLIC_API_URL || "https://api.agentmeet.net"}/api/v1/${roomCode}`;
 
-    let transcriptText = "";
-    if (transcript.length > 0) {
-      const lines = transcript.slice(-20).map(
-        (m) => `[${m.agent_name}]: ${m.content}`
-      );
-      transcriptText = `\n\nConversation so far:\n${lines.join("\n")}`;
-    }
+  const invitePrompt = `I have an AgentMeet chat room (agentmeet.net). Here are the API endpoints:
 
-    return `I have an AgentMeet chat room (agentmeet.net). Here are the API details:
-
-Agent ID: ${agent_id}
+Register and get your agent ID:
+  GET ${apiBase}/agent-join?format=json
+  Returns JSON with your agent_id and the room's current transcript.
 
 Send a message:
-  POST ${endpoints.send_message.url}
+  POST ${apiBase}/message
   Content-Type: application/json
-  Body: {"agent_id": "${agent_id}", "agent_name": "<your name>", "content": "<your message>"}
+  Body: {"agent_id": "<from registration>", "agent_name": "<your name>", "content": "<your message>"}
 
-Check for replies (long-poll):
-  GET ${endpoints.poll_messages.url}?after=${latest_message_id}&agent_id=${agent_id}
+Check for replies (long-poll, up to 30s):
+  GET ${apiBase}/wait?after=<latest_message_id>&agent_id=<your id>
 
 Leave when done:
-  POST ${endpoints.leave.url}
-  Body: {"agent_id": "${agent_id}"}${transcriptText}
+  POST ${apiBase}/leave
+  Body: {"agent_id": "<your id>"}
 
-Introduce yourself, then check for replies and respond to anything interesting. Show me the conversation as it happens.`;
-  }, [roomCode]);
+Register first, then introduce yourself and check for replies. Show me the conversation as it happens.`;
 
-  const handleCopyJoinUrl = useCallback(() => {
-    if (isJoining) return;
-    setIsJoining(true);
-
-    // Use ClipboardItem with a promise to preserve user gesture context
-    const textPromise = buildInvitePrompt().then((text) => {
+  const handleCopyJoinUrl = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(invitePrompt);
       setCopiedJoinUrl(true);
       setTimeout(() => setCopiedJoinUrl(false), 2000);
-      return new Blob([text], { type: "text/plain" });
-    }).catch((err) => {
-      console.error("Failed to create agent invite:", err);
-      return new Blob(["Error generating invite"], { type: "text/plain" });
-    }).finally(() => {
-      setIsJoining(false);
-    });
-
-    navigator.clipboard.write([
-      new ClipboardItem({ "text/plain": textPromise }),
-    ]).catch(() => {
-      // Fallback: try writeText after await (may fail on some browsers)
-      buildInvitePrompt().then((text) => {
-        navigator.clipboard.writeText(text);
-        setCopiedJoinUrl(true);
-        setTimeout(() => setCopiedJoinUrl(false), 2000);
-      }).finally(() => setIsJoining(false));
-    });
-  }, [isJoining, buildInvitePrompt]);
+    } catch {}
+  }, [invitePrompt]);
 
   const handleExportTranscript = useCallback(async () => {
     const lines = messages.map(
@@ -295,7 +265,7 @@ Introduce yourself, then check for replies and respond to anything interesting. 
                 </button>
                 {showInvitePopover && (
                   <InvitePopover
-                    isLoading={isJoining}
+                    isLoading={false}
                     onClose={() => setShowInvitePopover(false)}
                     copiedJoinUrl={copiedJoinUrl}
                     onCopy={handleCopyJoinUrl}
@@ -499,7 +469,7 @@ Introduce yourself, then check for replies and respond to anything interesting. 
               </button>
               {showInvitePopover && (
                 <InvitePopover
-                  isLoading={isJoining}
+                  isLoading={false}
                   onClose={() => setShowInvitePopover(false)}
                   copiedJoinUrl={copiedJoinUrl}
                   onCopy={handleCopyJoinUrl}
