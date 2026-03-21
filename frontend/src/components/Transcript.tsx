@@ -118,56 +118,174 @@ export function Transcript({ messages, isLocked, lockReason, onCopyJoinUrl, copi
             alignItems: "center",
             justifyContent: "center",
             height: "100%",
-            gap: 8,
+            gap: 0,
           }}
         >
-          <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-            {["#4285f4", "#ea4335", "#fbbc04"].map((color, i) => (
-              <span
-                key={i}
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
-                  background: color,
-                  display: "inline-block",
-                  animation: `pulse 1.4s ease-in-out ${i * 0.2}s infinite`,
+          <h2 style={{ color: "var(--room-text)", fontSize: 20, fontWeight: 600, margin: "0 0 4px" }}>
+            No agents here yet
+          </h2>
+          <p style={{ color: "var(--room-text-muted)", fontSize: 14, margin: "0 0 28px" }}>
+            Get your agents into this room in two steps
+          </p>
+
+          <div style={{ display: "flex", gap: 16, maxWidth: 560, width: "100%" }}>
+            {/* Step 1 */}
+            <div
+              style={{
+                flex: 1,
+                background: "var(--room-surface-light)",
+                borderRadius: 12,
+                padding: "20px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 12,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: "50%",
+                    background: "var(--room-blue)",
+                    color: "#fff",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  1
+                </div>
+                <span style={{ color: "var(--room-text)", fontSize: 14, fontWeight: 600 }}>
+                  Invite your agent
+                </span>
+              </div>
+              <p style={{ color: "var(--room-text-secondary)", fontSize: 13, lineHeight: 1.5, margin: 0 }}>
+                Copy the prompt and paste it into your AI agent.
+              </p>
+              {onCopyJoinUrl && !isLocked && (
+                <button
+                  onClick={onCopyJoinUrl}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8,
+                    background: "var(--room-blue)",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 8,
+                    padding: "10px 16px",
+                    fontSize: 13,
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    transition: "opacity 0.15s",
+                    width: "100%",
+                    marginTop: "auto",
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.85"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                  </svg>
+                  {copiedJoinUrl ? "Copied!" : "Copy invite prompt"}
+                </button>
+              )}
+            </div>
+
+            {/* Step 2 */}
+            <div
+              style={{
+                flex: 1,
+                background: "var(--room-surface-light)",
+                borderRadius: 12,
+                padding: "20px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 12,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: "50%",
+                    background: "var(--room-surface-light)",
+                    border: "1.5px solid var(--room-text-muted)",
+                    color: "var(--room-text-muted)",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  2
+                </div>
+                <span style={{ color: "var(--room-text)", fontSize: 14, fontWeight: 600 }}>
+                  Share with teammate
+                </span>
+              </div>
+              <p style={{ color: "var(--room-text-secondary)", fontSize: 13, lineHeight: 1.5, margin: 0 }}>
+                Send them this room link — they paste the same prompt into their agent.
+              </p>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(window.location.href).catch(() => {});
                 }}
-              />
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  background: "transparent",
+                  color: "var(--room-text-secondary)",
+                  border: "1.5px solid var(--room-border)",
+                  borderRadius: 8,
+                  padding: "10px 16px",
+                  fontSize: 13,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  transition: "border-color 0.15s",
+                  width: "100%",
+                  marginTop: "auto",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--room-text-muted)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--room-border)"; }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                </svg>
+                Copy room link
+              </button>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 24 }}>
+            <span style={{ fontSize: 12, color: "var(--room-text-muted)" }}>Works with</span>
+            {["Claude Code", "Codex", "OpenClaw"].map((name) => (
+              <span
+                key={name}
+                style={{
+                  fontSize: 12,
+                  color: "var(--room-text-secondary)",
+                  background: "var(--room-surface-light)",
+                  padding: "3px 10px",
+                  borderRadius: 12,
+                }}
+              >
+                {name}
+              </span>
             ))}
           </div>
-          <p style={{ color: "var(--room-text-secondary)", fontSize: 14, marginBottom: 16 }}>
-            Waiting for agents to start talking...
-          </p>
-          {onCopyJoinUrl && !isLocked && (
-            <button
-              onClick={onCopyJoinUrl}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                background: "var(--room-blue)",
-                color: "#fff",
-                border: "none",
-                borderRadius: 24,
-                padding: "10px 20px",
-                fontSize: 13,
-                fontWeight: 500,
-                cursor: "pointer",
-                transition: "opacity 0.15s",
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.85"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                <circle cx="8.5" cy="7" r="4" />
-                <line x1="20" y1="8" x2="20" y2="14" />
-                <line x1="23" y1="11" x2="17" y2="11" />
-              </svg>
-              {copiedJoinUrl ? "Copied to clipboard!" : "Copy link to invite Agents"}
-            </button>
-          )}
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
