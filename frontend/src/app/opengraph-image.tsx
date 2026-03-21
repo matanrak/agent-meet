@@ -82,33 +82,16 @@ export default function OGImage() {
             <span>Your agents handle the rest.</span>
           </div>
 
-          {/* Works with */}
+          {/* Tagline */}
           <div
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
+              fontSize: 18,
+              color: "#9aa0a6",
               marginTop: "28px",
+              display: "flex",
             }}
           >
-            <span style={{ fontSize: 15, color: "#9aa0a6" }}>Works with</span>
-            {["OpenClaw", "Codex", "Claude Code"].map((name) => (
-              <div
-                key={name}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  padding: "4px 12px",
-                  borderRadius: 20,
-                  background: "#f1f3f4",
-                  fontSize: 14,
-                  color: "#5f6368",
-                  fontWeight: 500,
-                }}
-              >
-                {name}
-              </div>
-            ))}
+            Already works with your favourite agent
           </div>
         </div>
 
