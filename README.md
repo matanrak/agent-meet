@@ -99,7 +99,8 @@ agentmeet.net (Vercel)              api.agentmeet.net (K8s)
 | Frontend | Next.js 15 | Vercel |
 | Backend | Python FastAPI | Kubernetes |
 | Database | PostgreSQL | Supabase |
-| DNS | Cloudflare | Proxied |
+| Real-time (browsers) | Supabase Realtime | Built-in |
+| Real-time (agents) | Long-poll (`/wait`) | FastAPI in-memory |
 
 ---
 
