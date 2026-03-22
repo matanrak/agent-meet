@@ -101,26 +101,7 @@ export function drawFrame(
   ctx.fillStyle = BG;
   ctx.fillRect(0, 0, WIDTH, canvasHeight);
 
-  // Header
-  ctx.fillStyle = SURFACE;
-  ctx.fillRect(0, 0, WIDTH, HEADER_HEIGHT);
-  // Green dot
-  ctx.beginPath();
-  ctx.arc(PADDING + 5, HEADER_HEIGHT / 2, 5, 0, Math.PI * 2);
-  ctx.fillStyle = "#34a853";
-  ctx.fill();
-  // Room code
-  ctx.font = `13px monospace`;
-  ctx.fillStyle = TEXT;
-  ctx.fillText(roomCode, PADDING + 18, HEADER_HEIGHT / 2 + 4);
-  // Agent count — always use total, not per-frame visible count
-  const countText = `${totalAgentCount} agent${totalAgentCount !== 1 ? "s" : ""}`;
-  ctx.font = `12px system-ui, -apple-system, sans-serif`;
-  ctx.fillStyle = TEXT_MUTED;
-  const countWidth = ctx.measureText(countText).width;
-  ctx.fillText(countText, WIDTH - PADDING - countWidth, HEADER_HEIGHT / 2 + 4);
-
-  // Calculate total content height for scroll viewport
+  // Calculate total content height for scroll viewport (before drawing header so clip works)
   let totalContentHeight = PADDING;
   const msgHeights: number[] = [];
   for (let i = 0; i < messages.length; i++) {
@@ -138,6 +119,12 @@ export function drawFrame(
   // Scroll offset: keep latest messages visible
   const visibleArea = canvasHeight - HEADER_HEIGHT - FOOTER_HEIGHT;
   const scrollOffset = Math.max(0, totalContentHeight - visibleArea);
+
+  // Clip message area so nothing renders above header or below footer
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, HEADER_HEIGHT, WIDTH, canvasHeight - HEADER_HEIGHT - FOOTER_HEIGHT);
+  ctx.clip();
 
   // Messages
   let y = HEADER_HEIGHT + PADDING - scrollOffset;
@@ -200,6 +187,40 @@ export function drawFrame(
 
     y = msgY + bubbleHeight + MSG_GAP;
   }
+
+  // Restore clip
+  ctx.restore();
+
+  // Header (drawn on top of messages so nothing bleeds above)
+  ctx.fillStyle = SURFACE;
+  ctx.fillRect(0, 0, WIDTH, HEADER_HEIGHT);
+  // 4 dots logo
+  const dotColors = ["#4285f4", "#ea4335", "#fbbc04", "#34a853"];
+  const dotStartX = PADDING;
+  const dotY = HEADER_HEIGHT / 2;
+  const dotR = 4;
+  const dotGap = 12;
+  for (let d = 0; d < dotColors.length; d++) {
+    ctx.beginPath();
+    ctx.arc(dotStartX + d * dotGap + dotR, dotY, dotR, 0, Math.PI * 2);
+    ctx.fillStyle = dotColors[d];
+    ctx.fill();
+  }
+  // "AgentMeet" text
+  const logoX = dotStartX + dotColors.length * dotGap + 8;
+  ctx.font = `14px system-ui, -apple-system, sans-serif`;
+  ctx.fillStyle = TEXT_MUTED;
+  ctx.fillText("Agent", logoX, dotY + 5);
+  const agentWidth = ctx.measureText("Agent").width;
+  ctx.fillStyle = TEXT;
+  ctx.font = `600 14px system-ui, -apple-system, sans-serif`;
+  ctx.fillText("Meet", logoX + agentWidth, dotY + 5);
+  // Agent count
+  const countText = `${totalAgentCount} agent${totalAgentCount !== 1 ? "s" : ""}`;
+  ctx.font = `12px system-ui, -apple-system, sans-serif`;
+  ctx.fillStyle = TEXT_MUTED;
+  const countWidth = ctx.measureText(countText).width;
+  ctx.fillText(countText, WIDTH - PADDING - countWidth, HEADER_HEIGHT / 2 + 4);
 
   // Footer
   const footerY = canvasHeight - FOOTER_HEIGHT;

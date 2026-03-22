@@ -2,13 +2,20 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { Message } from "@/lib/types";
-import { drawFrame, calculateFrameHeight, WIDTH, HEADER_HEIGHT, PADDING, AVATAR_SIZE, FOOTER_HEIGHT } from "@/lib/exportGif";
+import { drawFrame, calculateFrameHeight, WIDTH, PADDING, AVATAR_SIZE } from "@/lib/exportGif";
 
 interface GifExportModalProps {
   messages: Message[];
   roomCode: string;
   onClose: () => void;
 }
+
+const SPEED_PRESETS = [
+  { label: "Fast", value: 500 },
+  { label: "Normal", value: 1000 },
+  { label: "Slow", value: 1500 },
+  { label: "Slower", value: 2500 },
+];
 
 export function GifExportModal({ messages, roomCode, onClose }: GifExportModalProps) {
   const chatMessages = messages.filter(
@@ -18,7 +25,7 @@ export function GifExportModal({ messages, roomCode, onClose }: GifExportModalPr
   const [selected, setSelected] = useState<Set<number>>(
     () => new Set(chatMessages.map((m) => m.message_id))
   );
-  const [delay, setDelay] = useState(800);
+  const [delay, setDelay] = useState(1500);
   const [exporting, setExporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -82,7 +89,6 @@ export function GifExportModal({ messages, roomCode, onClose }: GifExportModalPr
       animFrameRef.current = requestAnimationFrame(animate);
     };
 
-    // Draw first frame immediately
     drawFrame(ctx, selectedMessages.slice(0, 1), roomCode, canvasHeight, allAgentIds.size);
     animFrameRef.current = requestAnimationFrame(animate);
 
@@ -115,7 +121,7 @@ export function GifExportModal({ messages, roomCode, onClose }: GifExportModalPr
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.7)",
+        background: "rgba(0,0,0,0.6)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -125,13 +131,14 @@ export function GifExportModal({ messages, roomCode, onClose }: GifExportModalPr
     >
       <div
         style={{
-          background: "#292a2d",
-          borderRadius: 16,
+          background: "var(--room-surface)",
+          borderRadius: 12,
           width: "min(90vw, 960px)",
           maxHeight: "85vh",
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
         }}
       >
         {/* Header */}
@@ -140,25 +147,34 @@ export function GifExportModal({ messages, roomCode, onClose }: GifExportModalPr
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            padding: "16px 20px",
-            borderBottom: "1px solid #3c4043",
+            padding: "14px 20px",
+            borderBottom: "1px solid var(--room-border)",
           }}
         >
-          <h2 style={{ margin: 0, color: "#e8eaed", fontSize: 16, fontWeight: 600 }}>
+          <span style={{ color: "var(--room-text)", fontSize: 15, fontWeight: 500 }}>
             Export GIF
-          </h2>
+          </span>
           <button
             onClick={onClose}
             style={{
-              background: "none",
+              background: "transparent",
               border: "none",
-              color: "#9aa0a6",
+              color: "var(--room-text-secondary)",
               cursor: "pointer",
-              fontSize: 20,
-              padding: 4,
+              width: 32,
+              height: 32,
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              transition: "background 0.15s",
             }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--room-surface-light)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
           >
-            ✕
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
           </button>
         </div>
 
@@ -167,96 +183,123 @@ export function GifExportModal({ messages, roomCode, onClose }: GifExportModalPr
           {/* Left: message picker */}
           <div
             style={{
-              width: 320,
-              borderRight: "1px solid #3c4043",
+              width: 300,
+              borderRight: "1px solid var(--room-border)",
               display: "flex",
               flexDirection: "column",
               flexShrink: 0,
+              background: "var(--room-bg)",
             }}
           >
             {/* Select controls */}
             <div
               style={{
                 padding: "10px 16px",
-                borderBottom: "1px solid #3c4043",
+                borderBottom: "1px solid var(--room-border)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
               }}
             >
-              <span style={{ color: "#9aa0a6", fontSize: 12 }}>
-                {selected.size}/{chatMessages.length} messages
+              <span style={{ color: "var(--room-text-secondary)", fontSize: 12 }}>
+                {selected.size} of {chatMessages.length}
               </span>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button
-                  onClick={selectAll}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "#8ab4f8",
-                    cursor: "pointer",
-                    fontSize: 12,
-                  }}
-                >
-                  All
-                </button>
-                <button
-                  onClick={selectNone}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "#8ab4f8",
-                    cursor: "pointer",
-                    fontSize: 12,
-                  }}
-                >
-                  None
-                </button>
+              <div style={{ display: "flex", gap: 4 }}>
+                {[
+                  { label: "All", fn: selectAll },
+                  { label: "None", fn: selectNone },
+                ].map((btn) => (
+                  <button
+                    key={btn.label}
+                    onClick={btn.fn}
+                    style={{
+                      background: "transparent",
+                      border: "1px solid var(--room-border)",
+                      color: "var(--room-text-secondary)",
+                      cursor: "pointer",
+                      fontSize: 11,
+                      padding: "3px 10px",
+                      borderRadius: 14,
+                      transition: "all 0.15s",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "var(--room-surface-light)";
+                      e.currentTarget.style.color = "var(--room-text)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "transparent";
+                      e.currentTarget.style.color = "var(--room-text-secondary)";
+                    }}
+                  >
+                    {btn.label}
+                  </button>
+                ))}
               </div>
             </div>
 
             {/* Message list */}
-            <div style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
-              {chatMessages.map((msg) => (
-                <label
-                  key={msg.message_id}
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: 10,
-                    padding: "6px 16px",
-                    cursor: "pointer",
-                    opacity: selected.has(msg.message_id) ? 1 : 0.4,
-                    transition: "opacity 0.15s",
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selected.has(msg.message_id)}
-                    onChange={() => toggle(msg.message_id)}
-                    style={{ marginTop: 3, accentColor: "#8ab4f8" }}
-                  />
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ color: "#8ab4f8", fontSize: 11, fontWeight: 600 }}>
-                      {msg.agent_name}
-                    </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "4px 0" }}>
+              {chatMessages.map((msg) => {
+                const isSelected = selected.has(msg.message_id);
+                return (
+                  <div
+                    key={msg.message_id}
+                    onClick={() => toggle(msg.message_id)}
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 10,
+                      padding: "8px 16px",
+                      cursor: "pointer",
+                      opacity: isSelected ? 1 : 0.35,
+                      background: isSelected ? "var(--room-surface)" : "transparent",
+                      transition: "all 0.15s",
+                    }}
+                  >
                     <div
                       style={{
-                        color: "#e8eaed",
-                        fontSize: 12,
-                        lineHeight: 1.4,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        display: "-webkit-box",
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: "vertical",
+                        width: 16,
+                        height: 16,
+                        borderRadius: 3,
+                        border: isSelected
+                          ? "none"
+                          : "2px solid var(--room-text-secondary)",
+                        background: isSelected ? "var(--room-primary)" : "transparent",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                        marginTop: 2,
                       }}
                     >
-                      {msg.content}
+                      {isSelected && (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#202124" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      )}
+                    </div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ color: "var(--room-primary)", fontSize: 11, fontWeight: 600, marginBottom: 2 }}>
+                        {msg.agent_name}
+                      </div>
+                      <div
+                        style={{
+                          color: "var(--room-text)",
+                          fontSize: 12,
+                          lineHeight: 1.4,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                        }}
+                      >
+                        {msg.content}
+                      </div>
                     </div>
                   </div>
-                </label>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -278,7 +321,7 @@ export function GifExportModal({ messages, roomCode, onClose }: GifExportModalPr
                 alignItems: "flex-start",
                 justifyContent: "center",
                 padding: 20,
-                background: "#1a1a1d",
+                background: "var(--room-bg)",
               }}
             >
               <canvas
@@ -295,44 +338,54 @@ export function GifExportModal({ messages, roomCode, onClose }: GifExportModalPr
             {/* Controls */}
             <div
               style={{
-                padding: "14px 20px",
-                borderTop: "1px solid #3c4043",
+                padding: "12px 20px",
+                borderTop: "1px solid var(--room-border)",
                 display: "flex",
                 alignItems: "center",
-                gap: 20,
+                justifyContent: "space-between",
+                gap: 16,
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
-                <label style={{ color: "#9aa0a6", fontSize: 12, whiteSpace: "nowrap" }}>
+              {/* Speed presets */}
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ color: "var(--room-text-secondary)", fontSize: 12, marginRight: 4 }}>
                   Speed
-                </label>
-                <input
-                  type="range"
-                  min={200}
-                  max={2000}
-                  step={100}
-                  value={delay}
-                  onChange={(e) => setDelay(Number(e.target.value))}
-                  style={{ flex: 1, accentColor: "#8ab4f8" }}
-                />
-                <span style={{ color: "#9aa0a6", fontSize: 12, minWidth: 45 }}>
-                  {delay}ms
                 </span>
+                {SPEED_PRESETS.map((preset) => (
+                  <button
+                    key={preset.value}
+                    onClick={() => setDelay(preset.value)}
+                    style={{
+                      background: delay === preset.value ? "var(--room-primary)" : "transparent",
+                      color: delay === preset.value ? "#202124" : "var(--room-text-secondary)",
+                      border: delay === preset.value ? "none" : "1px solid var(--room-border)",
+                      borderRadius: 14,
+                      padding: "4px 12px",
+                      fontSize: 12,
+                      fontWeight: delay === preset.value ? 600 : 400,
+                      cursor: "pointer",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
               </div>
 
               <button
                 onClick={handleExport}
                 disabled={exporting || selectedMessages.length === 0}
                 style={{
-                  background: exporting ? "#3c4043" : "#8ab4f8",
-                  color: exporting ? "#9aa0a6" : "#202124",
+                  background: exporting ? "var(--room-surface-light)" : "var(--room-primary)",
+                  color: exporting ? "var(--room-text-secondary)" : "#202124",
                   border: "none",
-                  borderRadius: 8,
-                  padding: "8px 20px",
+                  borderRadius: 20,
+                  padding: "8px 24px",
                   fontSize: 13,
                   fontWeight: 600,
                   cursor: exporting ? "default" : "pointer",
                   whiteSpace: "nowrap",
+                  transition: "all 0.15s",
                 }}
               >
                 {exporting ? `Exporting ${progress}%` : "Download GIF"}
