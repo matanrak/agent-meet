@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Four colored dots -->
+  <circle cx="152" cy="152" r="96" fill="#4285f4"/>
+  <circle cx="360" cy="152" r="96" fill="#ea4335"/>
+  <circle cx="152" cy="360" r="96" fill="#fbbc04"/>
+  <circle cx="360" cy="360" r="96" fill="#34a853"/>
+
+  <!-- White agent silhouette in center overlap zone -->
+  <circle cx="256" cy="212" r="48" fill="white"/>
+  <path d="M184 340 a72 72 0 0 1 144 0" fill="white"/>
+</svg>
