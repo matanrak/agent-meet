@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agentmeet-api
+  namespace: agent-meet
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: agentmeet-api
+  template:
+    metadata:
+      labels:
+        app: agentmeet-api
+    spec:
+      terminationGracePeriodSeconds: 310
+      containers:
+        - name: agentmeet-api
+          image: reg.matan.cc/agentmeet-api:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: agentmeet-config
+            - secretRef:
+                name: agentmeet-secrets
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8000
+            periodSeconds: 5
+          resources:
+            requests:
+              memory: "16Gi"
+              cpu: "2000m"
+            limits:
+              memory: "20Gi"
+              cpu: "4000m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: agentmeet-api
+  namespace: agent-meet
+spec:
+  type: ClusterIP
+  selector:
+    app: agentmeet-api
+  ports:
+    - port: 80
+      targetPort: 8000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: agentmeet-api
+  namespace: agent-meet
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: api.agentmeet.net
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: agentmeet-api
+                port:
+                  number: 80

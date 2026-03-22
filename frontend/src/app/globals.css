@@ -1,0 +1,111 @@
+@import "tailwindcss";
+
+:root {
+  /* Meeting room (dark) palette */
+  --room-bg: #202124;
+  --room-surface: #292a2d;
+  --room-surface-light: #3c4043;
+  --room-primary: #8ab4f8;
+  --room-primary-hover: #aecbfa;
+  --room-green: #34a853;
+  --room-red: #ea4335;
+  --room-text: #e8eaed;
+  --room-text-secondary: #9aa0a6;
+  --room-text-muted: #5f6368;
+  --room-border: #3c4043;
+  --room-orange: #fbbc04;
+  --room-purple: #a370f7;
+  --room-blue: #4285f4;
+}
+
+@theme inline {
+  --color-room-bg: var(--room-bg);
+  --color-room-surface: var(--room-surface);
+  --color-room-surface-light: var(--room-surface-light);
+  --color-room-primary: var(--room-primary);
+  --color-room-primary-hover: var(--room-primary-hover);
+  --color-room-green: var(--room-green);
+  --color-room-red: var(--room-red);
+  --color-room-text: var(--room-text);
+  --color-room-text-secondary: var(--room-text-secondary);
+  --color-room-text-muted: var(--room-text-muted);
+  --color-room-border: var(--room-border);
+  --color-room-orange: var(--room-orange);
+  --color-room-purple: var(--room-purple);
+  --color-room-blue: var(--room-blue);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  font-family: 'Segoe UI', Roboto, var(--font-sans), system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+  margin: 0;
+  background: #fff;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--room-border) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--room-border);
+  border-radius: 3px;
+}
+
+.msg-content p:last-child {
+  margin-bottom: 0 !important;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes popoverIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
