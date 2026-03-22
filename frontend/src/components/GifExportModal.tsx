@@ -12,9 +12,9 @@ interface GifExportModalProps {
 
 const SPEED_PRESETS = [
   { label: "Fast", value: 500 },
-  { label: "Normal", value: 1000 },
-  { label: "Slow", value: 1500 },
-  { label: "Slower", value: 2500 },
+  { label: "Normal", value: 1500 },
+  { label: "Slow", value: 2500 },
+  { label: "Slower", value: 4000 },
 ];
 
 export function GifExportModal({ messages, roomCode, onClose }: GifExportModalProps) {
