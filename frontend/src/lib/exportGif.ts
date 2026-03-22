@@ -19,10 +19,10 @@ function getAgentColor(agentId: string): string {
   return AGENT_COLORS[Math.abs(hash) % AGENT_COLORS.length];
 }
 
-const WIDTH = 600;
-const PADDING = 24;
+export const WIDTH = 600;
+export const PADDING = 24;
 const MSG_GAP = 12;
-const AVATAR_SIZE = 28;
+export const AVATAR_SIZE = 28;
 const FONT_SIZE = 13;
 const NAME_FONT_SIZE = 12;
 const LINE_HEIGHT = 1.5;
@@ -30,8 +30,8 @@ const BG = "#202124";
 const SURFACE = "#303134";
 const TEXT = "#e8eaed";
 const TEXT_MUTED = "#9aa0a6";
-const HEADER_HEIGHT = 48;
-const FOOTER_HEIGHT = 40;
+export const HEADER_HEIGHT = 48;
+export const FOOTER_HEIGHT = 40;
 
 function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
   const words = text.split(" ");
@@ -59,10 +59,10 @@ function measureMessageHeight(
   ctx.font = `${FONT_SIZE}px system-ui, -apple-system, sans-serif`;
   const lines = wrapText(ctx, msg.content, maxTextWidth);
   const textHeight = lines.length * FONT_SIZE * LINE_HEIGHT;
-  const bubblePadding = 20; // 10px top + 10px bottom
+  const bubblePadding = 20;
   let height = textHeight + bubblePadding;
   if (isNewSpeaker) {
-    height += NAME_FONT_SIZE + 8; // name line + gap
+    height += NAME_FONT_SIZE + 8;
   }
   return height;
 }
@@ -88,13 +88,14 @@ function drawRoundRect(
   ctx.closePath();
 }
 
-function drawFrame(
+export function drawFrame(
   ctx: CanvasRenderingContext2D,
   messages: Message[],
   roomCode: string,
-  canvasHeight: number
+  canvasHeight: number,
+  totalAgentCount: number
 ) {
-  const maxTextWidth = WIDTH - PADDING * 2 - AVATAR_SIZE - 12 - 28; // padding, avatar, gap, right padding
+  const maxTextWidth = WIDTH - PADDING * 2 - AVATAR_SIZE - 12 - 28;
 
   // Background
   ctx.fillStyle = BG;
@@ -112,16 +113,34 @@ function drawFrame(
   ctx.font = `13px monospace`;
   ctx.fillStyle = TEXT;
   ctx.fillText(roomCode, PADDING + 18, HEADER_HEIGHT / 2 + 4);
-  // Agent count
-  const agentIds = new Set(messages.map((m) => m.agent_id));
-  const countText = `${agentIds.size} agent${agentIds.size !== 1 ? "s" : ""}`;
+  // Agent count — always use total, not per-frame visible count
+  const countText = `${totalAgentCount} agent${totalAgentCount !== 1 ? "s" : ""}`;
   ctx.font = `12px system-ui, -apple-system, sans-serif`;
   ctx.fillStyle = TEXT_MUTED;
   const countWidth = ctx.measureText(countText).width;
   ctx.fillText(countText, WIDTH - PADDING - countWidth, HEADER_HEIGHT / 2 + 4);
 
+  // Calculate total content height for scroll viewport
+  let totalContentHeight = PADDING;
+  const msgHeights: number[] = [];
+  for (let i = 0; i < messages.length; i++) {
+    const msg = messages[i];
+    if (msg.agent_name === "system" || msg.agent_name === "System") {
+      msgHeights.push(0);
+      continue;
+    }
+    const isNewSpeaker = i === 0 || messages[i - 1].agent_id !== msg.agent_id;
+    const h = measureMessageHeight(ctx, msg, isNewSpeaker, maxTextWidth) + MSG_GAP;
+    msgHeights.push(h);
+    totalContentHeight += h;
+  }
+
+  // Scroll offset: keep latest messages visible
+  const visibleArea = canvasHeight - HEADER_HEIGHT - FOOTER_HEIGHT;
+  const scrollOffset = Math.max(0, totalContentHeight - visibleArea);
+
   // Messages
-  let y = HEADER_HEIGHT + PADDING;
+  let y = HEADER_HEIGHT + PADDING - scrollOffset;
 
   for (let i = 0; i < messages.length; i++) {
     const msg = messages[i];
@@ -129,6 +148,15 @@ function drawFrame(
 
     const isNewSpeaker = i === 0 || messages[i - 1].agent_id !== msg.agent_id;
     const color = getAgentColor(msg.agent_id);
+
+    // Skip if above visible area
+    const msgHeight = msgHeights[i];
+    if (y + msgHeight < HEADER_HEIGHT) {
+      y += msgHeight;
+      continue;
+    }
+    // Stop if below footer
+    if (y > canvasHeight - FOOTER_HEIGHT) break;
 
     let msgY = y;
 
@@ -177,25 +205,22 @@ function drawFrame(
   const footerY = canvasHeight - FOOTER_HEIGHT;
   ctx.fillStyle = BG;
   ctx.fillRect(0, footerY, WIDTH, FOOTER_HEIGHT);
-  // Divider
   ctx.strokeStyle = "#3c4043";
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(0, footerY);
   ctx.lineTo(WIDTH, footerY);
   ctx.stroke();
-  // Green dot
   ctx.beginPath();
   ctx.arc(PADDING + 5, footerY + FOOTER_HEIGHT / 2, 5, 0, Math.PI * 2);
   ctx.fillStyle = "#34a853";
   ctx.fill();
-  // Footer text
   ctx.font = `12px system-ui, -apple-system, sans-serif`;
   ctx.fillStyle = TEXT_MUTED;
   ctx.fillText("agentmeet.net", PADDING + 18, footerY + FOOTER_HEIGHT / 2 + 4);
 }
 
-function calculateFrameHeight(
+export function calculateFrameHeight(
   ctx: CanvasRenderingContext2D,
   messages: Message[],
   maxTextWidth: number
@@ -214,9 +239,10 @@ function calculateFrameHeight(
 export async function exportGif(
   messages: Message[],
   roomCode: string,
+  delay: number,
+  totalAgentCount: number,
   onProgress?: (pct: number) => void
 ): Promise<Blob> {
-  // Filter out system messages for the GIF
   const chatMessages = messages.filter(
     (m) => m.agent_name !== "system" && m.agent_name !== "System"
   );
@@ -225,19 +251,15 @@ export async function exportGif(
     throw new Error("No messages to export");
   }
 
-  // Cap at 30 messages to keep GIF reasonable
-  const cappedMessages = chatMessages.slice(0, 30);
+  const cappedMessages = chatMessages.slice(0, 50);
 
-  // Create a measuring canvas
   const measureCanvas = document.createElement("canvas");
   measureCanvas.width = WIDTH;
   measureCanvas.height = 100;
   const measureCtx = measureCanvas.getContext("2d")!;
   const maxTextWidth = WIDTH - PADDING * 2 - AVATAR_SIZE - 12 - 28;
 
-  // Calculate max height (all messages shown)
   const maxHeight = calculateFrameHeight(measureCtx, cappedMessages, maxTextWidth);
-  // Clamp height so GIF doesn't get too tall
   const canvasHeight = Math.min(maxHeight, 800);
 
   const canvas = document.createElement("canvas");
@@ -245,27 +267,24 @@ export async function exportGif(
   canvas.height = canvasHeight;
   const ctx = canvas.getContext("2d")!;
 
-  // Dynamically import modern-gif
   const { encode } = await import("modern-gif");
 
   const frames: { data: ImageData; delay: number }[] = [];
-  const totalFrames = cappedMessages.length + 1; // +1 for final hold frame
+  const totalFrames = cappedMessages.length + 1;
 
-  // Generate frames — show messages appearing one by one
   for (let i = 1; i <= cappedMessages.length; i++) {
     const visibleMessages = cappedMessages.slice(0, i);
-    drawFrame(ctx, visibleMessages, roomCode, canvasHeight);
+    drawFrame(ctx, visibleMessages, roomCode, canvasHeight, totalAgentCount);
     const imageData = ctx.getImageData(0, 0, WIDTH, canvasHeight);
-    frames.push({ data: imageData, delay: 800 });
+    frames.push({ data: imageData, delay });
     onProgress?.(Math.round((i / totalFrames) * 100));
   }
 
-  // Hold on the last frame longer
+  // Hold last frame longer
   const lastImageData = ctx.getImageData(0, 0, WIDTH, canvasHeight);
   frames.push({ data: lastImageData, delay: 3000 });
   onProgress?.(100);
 
-  // Encode GIF
   const gif = await encode({
     width: WIDTH,
     height: canvasHeight,
