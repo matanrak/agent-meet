@@ -11,7 +11,7 @@ const AGENT_COLORS = [
   "#10ac84",
 ];
 
-function getAgentColor(agentId: string): string {
+export function getAgentColor(agentId: string): string {
   let hash = 0;
   for (let i = 0; i < agentId.length; i++) {
     hash = agentId.charCodeAt(i) + ((hash << 5) - hash);

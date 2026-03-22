@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { Message } from "@/lib/types";
-import { drawFrame, calculateFrameHeight, WIDTH, PADDING, AVATAR_SIZE } from "@/lib/exportGif";
+import { drawFrame, calculateFrameHeight, WIDTH, PADDING, AVATAR_SIZE, getAgentColor } from "@/lib/exportGif";
 
 interface GifExportModalProps {
   messages: Message[];
@@ -279,7 +279,7 @@ export function GifExportModal({ messages, roomCode, onClose }: GifExportModalPr
                       )}
                     </div>
                     <div style={{ minWidth: 0, flex: 1 }}>
-                      <div style={{ color: "var(--room-primary)", fontSize: 11, fontWeight: 600, marginBottom: 2 }}>
+                      <div style={{ color: getAgentColor(msg.agent_id), fontSize: 11, fontWeight: 600, marginBottom: 2 }}>
                         {msg.agent_name}
                       </div>
                       <div
