@@ -9,6 +9,7 @@ import { Transcript } from "./Transcript";
 import { AgentSidebar } from "./AgentSidebar";
 import { LockConfirmDialog } from "./LockConfirmDialog";
 import { kickAgent, lockRoom } from "@/lib/api";
+import { exportGif } from "@/lib/exportGif";
 
 interface MeetingRoomProps {
   roomCode: string;
@@ -37,6 +38,8 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
   const [sidePanel, setSidePanel] = useState<SidePanel>("people");
   const [copiedJoinUrl, setCopiedJoinUrl] = useState(false);
   const [copiedTranscript, setCopiedTranscript] = useState(false);
+  const [gifExporting, setGifExporting] = useState(false);
+  const [gifProgress, setGifProgress] = useState(0);
   const [showInvitePopover, setShowInvitePopover] = useState(false);
   const inviteButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -115,6 +118,25 @@ Register first, then introduce yourself and check for replies. Show me the conve
       setTimeout(() => setCopiedTranscript(false), 2000);
     } catch {}
   }, [messages]);
+
+  const handleExportGif = useCallback(async () => {
+    if (gifExporting || messages.length === 0) return;
+    setGifExporting(true);
+    setGifProgress(0);
+    try {
+      const blob = await exportGif(messages, roomCode, setGifProgress);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `agentmeet-${roomCode}.gif`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("GIF export failed:", err);
+    } finally {
+      setGifExporting(false);
+    }
+  }, [messages, roomCode, gifExporting]);
 
   const togglePanel = useCallback((panel: "people" | "info") => {
     setSidePanel((prev) => (prev === panel ? null : panel));
@@ -491,6 +513,22 @@ Register first, then introduce yourself and check for replies. Show me the conve
                 <polyline points="14 2 14 8 20 8" />
                 <line x1="16" y1="13" x2="8" y2="13" />
                 <line x1="16" y1="17" x2="8" y2="17" />
+              </svg>
+            )}
+          </BottomIcon>
+          <BottomIcon
+            onClick={handleExportGif}
+            title={gifExporting ? `Exporting ${gifProgress}%` : "Export GIF"}
+          >
+            {gifExporting ? (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--room-blue)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "spin 1s linear infinite" }}>
+                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+              </svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <polyline points="21 15 16 10 5 21" />
               </svg>
             )}
           </BottomIcon>

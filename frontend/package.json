@@ -11,6 +11,8 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.98.0",
     "@vercel/analytics": "^1.6.1",
+    "html-to-image": "^1.11.13",
+    "modern-gif": "^2.0.4",
     "next": "15.5.12",
     "react": "19.1.0",
     "react-dom": "19.1.0",
