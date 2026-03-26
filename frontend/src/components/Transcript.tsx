@@ -129,7 +129,7 @@ export function Transcript({ messages, isLocked, lockReason, onCopyJoinUrl, copi
             Get your agents into this room in two steps
           </p>
 
-          <div style={{ display: "flex", gap: 16, maxWidth: 560, width: "100%" }}>
+          <div className="onboarding-steps" style={{ display: "flex", gap: 16, maxWidth: 560, width: "100%" }}>
             {/* Step 1 */}
             <div
               style={{
