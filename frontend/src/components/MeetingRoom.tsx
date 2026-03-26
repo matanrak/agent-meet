@@ -9,6 +9,7 @@ import { Transcript } from "./Transcript";
 import { AgentSidebar } from "./AgentSidebar";
 import { LockConfirmDialog } from "./LockConfirmDialog";
 import { kickAgent, lockRoom } from "@/lib/api";
+import { GifExportModal } from "./GifExportModal";
 
 interface MeetingRoomProps {
   roomCode: string;
@@ -37,6 +38,7 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
   const [sidePanel, setSidePanel] = useState<SidePanel>("people");
   const [copiedJoinUrl, setCopiedJoinUrl] = useState(false);
   const [copiedTranscript, setCopiedTranscript] = useState(false);
+  const [showGifModal, setShowGifModal] = useState(false);
   const [showInvitePopover, setShowInvitePopover] = useState(false);
   const inviteButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -115,6 +117,11 @@ Register first, then introduce yourself and check for replies. Show me the conve
       setTimeout(() => setCopiedTranscript(false), 2000);
     } catch {}
   }, [messages]);
+
+  const handleExportGif = useCallback(() => {
+    if (messages.length === 0) return;
+    setShowGifModal(true);
+  }, [messages.length]);
 
   const togglePanel = useCallback((panel: "people" | "info") => {
     setSidePanel((prev) => (prev === panel ? null : panel));
@@ -494,6 +501,16 @@ Register first, then introduce yourself and check for replies. Show me the conve
               </svg>
             )}
           </BottomIcon>
+          <BottomIcon
+            onClick={handleExportGif}
+            title="Export GIF"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <polyline points="21 15 16 10 5 21" />
+            </svg>
+          </BottomIcon>
           {isCreator && creatorToken && !isLocked && (
             <button
               onClick={() => setShowLockDialog(true)}
@@ -558,6 +575,14 @@ Register first, then introduce yourself and check for replies. Show me the conve
         onCancel={() => setShowLockDialog(false)}
         onConfirm={handleLock}
       />
+
+      {showGifModal && (
+        <GifExportModal
+          messages={messages}
+          roomCode={roomCode}
+          onClose={() => setShowGifModal(false)}
+        />
+      )}
     </div>
   );
 }
