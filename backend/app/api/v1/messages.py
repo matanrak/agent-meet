@@ -15,7 +15,8 @@ from app.models.message import (
     WaitResponse,
 )
 from app.services import agent_service, room_service
-from app.services.message_service import MessageError, get_messages_after, send_message
+from app.models.message import Decision
+from app.services.message_service import MessageError, get_decisions, get_messages_after, send_message
 from app.services.room_state import get_or_create_room_state
 
 router = APIRouter()
@@ -36,6 +37,8 @@ async def post_message(
             agent_id=body.agent_id,
             agent_name=body.agent_name,
             content=body.content,
+            message_type=body.type,
+            references=body.references,
         )
     except MessageError as e:
         content = {"error": e.error, "message": e.message}
@@ -118,6 +121,8 @@ async def wait_for_messages(
                     agent_name=m["agent_name"],
                     content=m["content"],
                     timestamp=m["timestamp"],
+                    type=m.get("type", "message"),
+                    references=m.get("references"),
                 )
                 for m in new_messages
             ]
@@ -137,6 +142,11 @@ async def wait_for_messages(
             is_locked = room_now["state"] == "locked" if room_now else False
             lock_reason = room_now.get("lock_reason") if is_locked and room_now else None
 
+            # Get thinking agents and decisions
+            thinking = list(room_state.thinking_agents.values()) or None
+            decisions_list = await get_decisions(pool, room_code)
+            decisions = [Decision(**d) for d in decisions_list] if decisions_list else None
+
             return WaitResponse(
                 messages=msgs,
                 latest_message_id=latest_id,
@@ -145,6 +155,8 @@ async def wait_for_messages(
                 timeout=False,
                 active_agents=await _active_count(),
                 events=collected_events if collected_events else None,
+                thinking=thinking,
+                decisions=decisions,
             )
 
         # 4. Check if room is locked
@@ -197,6 +209,8 @@ async def wait_for_messages(
                         agent_name=m["agent_name"],
                         content=m["content"],
                         timestamp=m["timestamp"],
+                        type=m.get("type", "message"),
+                        references=m.get("references"),
                     )
                     for m in new_messages
                 ]
@@ -206,6 +220,9 @@ async def wait_for_messages(
                 room_now = await room_service.get_room(pool, room_code)
                 is_locked = room_now["state"] == "locked" if room_now else False
                 lock_reason = room_now.get("lock_reason") if is_locked and room_now else None
+                thinking = list(room_state.thinking_agents.values()) or None
+                decisions_list = await get_decisions(pool, room_code)
+                decisions = [Decision(**d) for d in decisions_list] if decisions_list else None
                 return WaitResponse(
                     messages=msgs,
                     latest_message_id=latest_id,
@@ -214,8 +231,11 @@ async def wait_for_messages(
                     timeout=False,
                     active_agents=await _active_count(),
                     events=collected_events if collected_events else None,
+                    thinking=thinking,
+                    decisions=decisions,
                 )
 
+            thinking = list(room_state.thinking_agents.values()) or None
             return WaitResponse(
                 messages=[],
                 latest_message_id=after,
@@ -223,4 +243,5 @@ async def wait_for_messages(
                 timeout=True,
                 active_agents=await _active_count(),
                 events=collected_events if collected_events else None,
+                thinking=thinking,
             )

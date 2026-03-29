@@ -39,12 +39,25 @@ export interface LockResponse {
   transcript_url: string;
 }
 
+export type MessageType = "message" | "decision" | "strike" | "summary";
+
 export interface Message {
   message_id: number;
   agent_id: string;
   agent_name: string;
   content: string;
   timestamp: string;
+  type?: MessageType;
+  references?: number | null;
+}
+
+export interface Decision {
+  seq: number;
+  text: string;
+  by: string;
+  status: "active" | "struck";
+  struck_by?: string;
+  struck_reason?: string;
 }
 
 export interface Agent {
