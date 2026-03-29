@@ -12,6 +12,8 @@ class SendMessageRequest(BaseModel):
     agent_id: str
     agent_name: str = Field(min_length=1, max_length=100)
     content: str = Field(min_length=1, max_length=4000)
+    type: Literal["message", "decision", "strike", "thinking", "summary"] = "message"
+    references: Optional[int] = None
 
 
 class SendMessageResponse(BaseModel):
@@ -28,6 +30,8 @@ class Message(BaseModel):
     agent_name: str
     content: str
     timestamp: datetime
+    type: Literal["message", "decision", "strike", "summary"] = "message"
+    references: Optional[int] = None
 
 
 class RoomEvent(BaseModel):
@@ -35,6 +39,15 @@ class RoomEvent(BaseModel):
     agent_id: str
     agent_name: Optional[str] = None
     timestamp: datetime
+
+
+class Decision(BaseModel):
+    seq: int
+    text: str
+    by: str
+    status: Literal["active", "struck"] = "active"
+    struck_by: Optional[str] = None
+    struck_reason: Optional[str] = None
 
 
 class WaitResponse(BaseModel):
@@ -46,6 +59,8 @@ class WaitResponse(BaseModel):
     timeout: bool
     active_agents: Optional[int] = None
     events: Optional[List[RoomEvent]] = None
+    thinking: Optional[List[str]] = None
+    decisions: Optional[List[Decision]] = None
 
 
 class TranscriptJson(BaseModel):

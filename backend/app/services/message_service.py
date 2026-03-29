@@ -29,6 +29,8 @@ async def send_message(
     agent_id: str,
     agent_name: str,
     content: str,
+    message_type: str = "message",
+    references: Optional[int] = None,
 ) -> Dict[str, Any]:
     """
     Send a message to a room.
@@ -88,11 +90,25 @@ async def send_message(
             "Agent has been kicked or has left the room",
         )
 
-    # 4. Get seen set from in-memory tracking
+    # 4. Handle thinking type — transient, not stored
     room_state = get_or_create_room_state(room_code)
+    if message_type == "thinking":
+        room_state.thinking_agents[agent_id] = agent_name
+        room_state.event.set()
+        return {
+            "message_id": 0,
+            "timestamp": datetime.now(timezone.utc),
+            "room_message_count": room["message_count"],
+            "max_messages": room["max_messages"],
+        }
+
+    # Clear thinking state when agent sends a real message
+    room_state.thinking_agents.pop(agent_id, None)
+
+    # 5. Get seen set from in-memory tracking
     seen_set = room_state.get_seen(agent_id)
 
-    # 5. Atomic insert: increment room counter and use it as room_seq
+    # 6. Atomic insert: increment room counter and use it as room_seq
     row = await pool.fetchrow(
         """
         WITH seq AS (
@@ -103,8 +119,9 @@ async def send_message(
             WHERE room_code = $1
             RETURNING message_count, max_messages
         )
-        INSERT INTO app.messages (room_code, agent_id, agent_name, content, room_seq)
-        SELECT $1, $2, $3, $4, seq.message_count
+        INSERT INTO app.messages (room_code, agent_id, agent_name, content, room_seq,
+                                  message_type, references_seq)
+        SELECT $1, $2, $3, $4, seq.message_count, $5, $6
         FROM seq
         RETURNING id, room_seq, created_at,
                   (SELECT message_count FROM seq) AS room_message_count,
@@ -114,13 +131,15 @@ async def send_message(
         agent_id,
         agent_name,
         content,
+        message_type,
+        references,
     )
     message_id = row["room_seq"]
     timestamp = row["created_at"]
     room_message_count = row["room_message_count"]
     max_messages = row["max_messages"]
 
-    # Compute unseen messages: IDs 1..room_message_count-1 minus what agent has seen
+    # 7. Compute unseen messages: IDs 1..room_message_count-1 minus what agent has seen
     if seen_set:
         unseen = sorted(
             seq for seq in range(1, room_message_count) if seq not in seen_set
@@ -128,16 +147,16 @@ async def send_message(
     else:
         unseen = []
 
-    # 6. The agent has now "seen" its own message
+    # 8. The agent has now "seen" its own message
     room_state.mark_seen(agent_id, [message_id])
 
-    # 7. Check if we should auto-lock
+    # 9. Check if we should auto-lock
     if room_message_count >= max_messages:
         await room_service.lock_room(pool, room_code, "max_messages_reached")
         room_state.lock_event.set()
         room_state.seen_messages.clear()
 
-    # 8. Wake waiters
+    # 10. Wake waiters
     room_state.event.set()
 
     return {
@@ -158,7 +177,8 @@ async def get_messages_after(
     rows = await pool.fetch(
         """
         SELECT room_seq AS message_id, agent_id, agent_name, content,
-               created_at AS timestamp
+               created_at AS timestamp, message_type AS type,
+               references_seq AS references
         FROM app.messages
         WHERE room_code = $1 AND room_seq > $2
         ORDER BY room_seq
@@ -182,7 +202,8 @@ async def get_recent_messages(
         rows = await pool.fetch(
             """
             SELECT room_seq AS message_id, agent_id, agent_name, content,
-                   created_at AS timestamp
+                   created_at AS timestamp, message_type AS type,
+                   references_seq AS references
             FROM app.messages
             WHERE room_code = $1
             ORDER BY room_seq DESC
@@ -196,7 +217,8 @@ async def get_recent_messages(
         rows = await pool.fetch(
             """
             SELECT room_seq AS message_id, agent_id, agent_name, content,
-                   created_at AS timestamp
+                   created_at AS timestamp, message_type AS type,
+                   references_seq AS references
             FROM app.messages
             WHERE room_code = $1
             ORDER BY room_seq
@@ -222,7 +244,8 @@ async def get_paginated_messages(
     rows = await pool.fetch(
         """
         SELECT room_seq AS message_id, agent_id, agent_name, content,
-               created_at AS timestamp
+               created_at AS timestamp, message_type AS type,
+               references_seq AS references
         FROM app.messages
         WHERE room_code = $1
         ORDER BY room_seq
@@ -241,3 +264,35 @@ async def get_paginated_messages(
         "offset": offset,
         "has_more": (offset + limit) < total,
     }
+
+
+async def get_decisions(
+    pool: asyncpg.Pool,
+    room_code: str,
+) -> List[Dict[str, Any]]:
+    """Get all decisions and strikes for a room, computing active/struck status."""
+    rows = await pool.fetch(
+        """
+        SELECT room_seq, agent_name, content, message_type, references_seq
+        FROM app.messages
+        WHERE room_code = $1 AND message_type IN ('decision', 'strike')
+        ORDER BY room_seq
+        """,
+        room_code,
+    )
+
+    decisions: Dict[int, Dict[str, Any]] = {}
+    for r in rows:
+        if r["message_type"] == "decision":
+            decisions[r["room_seq"]] = {
+                "seq": r["room_seq"],
+                "text": r["content"],
+                "by": r["agent_name"],
+                "status": "active",
+            }
+        elif r["message_type"] == "strike" and r["references_seq"] in decisions:
+            decisions[r["references_seq"]]["status"] = "struck"
+            decisions[r["references_seq"]]["struck_by"] = r["agent_name"]
+            decisions[r["references_seq"]]["struck_reason"] = r["content"]
+
+    return list(decisions.values())

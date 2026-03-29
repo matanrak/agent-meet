@@ -23,6 +23,8 @@ class RoomState:
     pending_events: List[RoomEvent] = field(default_factory=list)
     # Per-agent set of room_seq IDs delivered via /wait
     seen_messages: Dict[str, Set[int]] = field(default_factory=dict)
+    # Transient thinking indicators: agent_id -> agent_name
+    thinking_agents: Dict[str, str] = field(default_factory=dict)
 
     def add_event(self, event: RoomEvent) -> None:
         """Append an event, trimming oldest if buffer is full."""

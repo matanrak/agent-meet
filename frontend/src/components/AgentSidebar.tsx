@@ -1,6 +1,6 @@
 "use client";
 
-import type { Agent, Message } from "@/lib/types";
+import type { Agent, Decision, Message } from "@/lib/types";
 
 const AGENT_COLORS = [
   "#e94560",
@@ -28,6 +28,7 @@ interface AgentSidebarProps {
   kickingId: string | null;
   onKick?: (agentId: string) => void;
   onClose?: () => void;
+  decisions?: Decision[];
 }
 
 export function AgentSidebar({
@@ -37,6 +38,7 @@ export function AgentSidebar({
   kickingId,
   onKick,
   onClose,
+  decisions = [],
 }: AgentSidebarProps) {
   const visibleAgents = agents.filter(
     (a) => a.status === "active" || a.status === "left" || a.status === "kicked"
@@ -80,8 +82,9 @@ export function AgentSidebar({
         )}
       </div>
 
-      {/* Agent list */}
+      {/* Scrollable content: agents + decisions */}
       <div style={{ flex: 1, overflowY: "auto", padding: "0 12px 12px" }}>
+        {/* Agent list */}
         {visibleAgents.length === 0 ? (
           <div
             style={{
@@ -241,6 +244,86 @@ export function AgentSidebar({
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Decisions section */}
+        {decisions.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "8px 8px 10px",
+                borderTop: "1px solid var(--room-border)",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px",
+                  color: "var(--room-text-muted)",
+                }}
+              >
+                Decisions
+              </span>
+              <span style={{ fontSize: 11, color: "var(--room-text-muted)" }}>
+                {decisions.filter((d) => d.status === "active").length} active
+              </span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {decisions.map((decision) => (
+                <div
+                  key={decision.seq}
+                  style={{
+                    padding: "12px",
+                    borderRadius: 8,
+                    background: "var(--room-surface-light)",
+                    opacity: decision.status === "struck" ? 0.5 : 1,
+                    position: "relative",
+                  }}
+                >
+                  <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                    {/* Status icon */}
+                    <div style={{ flexShrink: 0, marginTop: 2 }}>
+                      {decision.status === "active" ? (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10" stroke="var(--room-green)" />
+                          <polyline points="9 12 11.5 14.5 16 10" stroke="var(--room-green)" />
+                        </svg>
+                      ) : (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10" stroke="var(--room-red)" />
+                          <line x1="15" y1="9" x2="9" y2="15" stroke="var(--room-red)" />
+                          <line x1="9" y1="9" x2="15" y2="15" stroke="var(--room-red)" />
+                        </svg>
+                      )}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: "var(--room-text)",
+                          lineHeight: 1.45,
+                          textDecoration: decision.status === "struck" ? "line-through" : "none",
+                        }}
+                      >
+                        {decision.text}
+                      </div>
+                      <div style={{ fontSize: 11, color: "var(--room-text-muted)", marginTop: 6 }}>
+                        by {decision.by}
+                        {decision.struck_by && (
+                          <span> &middot; struck by {decision.struck_by}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

@@ -331,6 +331,21 @@ export function Transcript({ messages, isLocked, lockReason, onCopyJoinUrl, copi
               );
             }
 
+            const msgType = msg.type || "message";
+            const isDecision = msgType === "decision";
+            const isStrike = msgType === "strike";
+            const isSummary = msgType === "summary";
+            const isSpecial = isDecision || isStrike || isSummary;
+
+            // Styled border for special message types
+            const specialBorder = isDecision
+              ? "2px solid var(--room-green)"
+              : isStrike
+              ? "2px solid var(--room-red)"
+              : isSummary
+              ? "2px solid var(--room-blue)"
+              : "none";
+
             return (
               <div
                 key={msg.message_id}
@@ -383,6 +398,43 @@ export function Transcript({ messages, isLocked, lockReason, onCopyJoinUrl, copi
                       </span>
                     </div>
                   )}
+                  {isSpecial && (
+                    <div
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 4,
+                        fontSize: 10,
+                        fontWeight: 600,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.5px",
+                        color: isDecision ? "var(--room-green)" : isStrike ? "var(--room-red)" : "var(--room-blue)",
+                        marginBottom: 4,
+                      }}
+                    >
+                      {isDecision && (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      )}
+                      {isStrike && (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="18" y1="6" x2="6" y2="18" />
+                          <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                      )}
+                      {isSummary && (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                          <polyline points="14 2 14 8 20 8" />
+                        </svg>
+                      )}
+                      {msgType}
+                      {isStrike && msg.references != null && (
+                        <span style={{ fontWeight: 400, opacity: 0.7 }}> #{msg.references}</span>
+                      )}
+                    </div>
+                  )}
                   <div
                     className="msg-content"
                     style={{
@@ -393,6 +445,8 @@ export function Transcript({ messages, isLocked, lockReason, onCopyJoinUrl, copi
                       color: "var(--room-text)",
                       lineHeight: 1.5,
                       wordBreak: "break-word",
+                      borderLeft: specialBorder,
+                      opacity: isStrike ? 0.7 : 1,
                     }}
                   >
                     <MessageContent content={msg.content} />

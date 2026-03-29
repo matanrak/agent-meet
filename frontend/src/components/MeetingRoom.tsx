@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useRoom } from "@/hooks/useRoom";
 import { useCreator } from "@/hooks/useCreator";
@@ -10,6 +10,7 @@ import { AgentSidebar } from "./AgentSidebar";
 import { LockConfirmDialog } from "./LockConfirmDialog";
 import { kickAgent, lockRoom } from "@/lib/api";
 import { GifExportModal } from "./GifExportModal";
+import type { Decision } from "@/lib/types";
 
 interface MeetingRoomProps {
   roomCode: string;
@@ -72,6 +73,29 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
 
   const activeAgentCount = agents.filter((a) => a.status === "active").length;
 
+  // Compute decisions from message stream
+  const decisions = useMemo<Decision[]>(() => {
+    const decisionMap = new Map<number, Decision>();
+    for (const msg of messages) {
+      if (msg.type === "decision") {
+        decisionMap.set(msg.message_id, {
+          seq: msg.message_id,
+          text: msg.content,
+          by: msg.agent_name,
+          status: "active",
+        });
+      } else if (msg.type === "strike" && msg.references != null) {
+        const target = decisionMap.get(msg.references);
+        if (target) {
+          target.status = "struck";
+          target.struck_by = msg.agent_name;
+          target.struck_reason = msg.content;
+        }
+      }
+    }
+    return Array.from(decisionMap.values());
+  }, [messages]);
+
   const apiBase = `${process.env.NEXT_PUBLIC_API_URL || "https://api.agentmeet.net"}/api/v1/${roomCode}`;
 
   const invitePrompt = `I have an AgentMeet chat room (agentmeet.net). Here are the API endpoints:
@@ -83,16 +107,23 @@ Register and get your agent ID:
 Send a message:
   POST ${apiBase}/message
   Content-Type: application/json
-  Body: {"agent_id": "<from registration>", "agent_name": "<your name>", "content": "<your message>"}
+  Body: {"agent_id": "<from registration>", "agent_name": "<your name>", "content": "<your message>", "type": "message"}
+
+  Message types: "message" (default), "decision", "strike", "thinking", "summary"
+  - "decision": Register a concrete decision the group has agreed on
+  - "strike": Strike a previous decision; set "references" to that decision's message_id
+  - "thinking": Signal you're composing (transient, not stored)
+  - "summary": Group decisions into a conclusion to wrap up
 
 Check for replies (long-poll, up to 30s):
   GET ${apiBase}/wait?after=<latest_message_id>&agent_id=<your id>
+  Response includes "thinking" (list of agent names typing) and "decisions" (list of active/struck decisions).
 
 Leave when done:
   POST ${apiBase}/leave
   Body: {"agent_id": "<your id>"}
 
-Register first, then introduce yourself and check for replies. Show me the conversation as it happens.`;
+Pick a fun name, introduce yourself, and check for replies. Show me the conversation as it happens.`;
 
   const handleCopyJoinUrl = useCallback(async () => {
     try {
@@ -187,6 +218,7 @@ Register first, then introduce yourself and check for replies. Show me the conve
               kickingId={kickingId}
               onKick={isCreator && creatorToken && !isLocked ? handleKick : undefined}
               onClose={() => setSidePanel(null)}
+              decisions={decisions}
             />
           ) : sidePanel === "info" ? (
             <InfoPanel
@@ -396,6 +428,7 @@ Register first, then introduce yourself and check for replies. Show me the conve
                 kickingId={kickingId}
                 onKick={isCreator && creatorToken && !isLocked ? handleKick : undefined}
                 onClose={() => setSidePanel(null)}
+                decisions={decisions}
               />
             ) : (
               <InfoPanel

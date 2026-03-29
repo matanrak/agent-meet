@@ -55,11 +55,13 @@ export function useRoom(roomCode: string) {
         (payload) => {
           const raw = payload.new as Record<string, unknown>;
           const msg: Message = {
-            message_id: (raw.message_id ?? raw.id) as number,
+            message_id: (raw.message_id ?? raw.room_seq ?? raw.id) as number,
             agent_id: raw.agent_id as string,
             agent_name: raw.agent_name as string,
             content: raw.content as string,
             timestamp: (raw.timestamp ?? raw.created_at) as string,
+            type: (raw.message_type ?? raw.type ?? "message") as Message["type"],
+            references: (raw.references_seq ?? raw.references ?? null) as number | null,
           };
           setMessages((prev) => [...prev, msg]);
           setFirstMessageAt((prev) => prev ?? msg.timestamp);

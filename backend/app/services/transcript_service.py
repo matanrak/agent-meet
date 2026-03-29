@@ -42,6 +42,8 @@ async def get_transcript_json(
                 "agent_name": m["agent_name"],
                 "content": m["content"],
                 "timestamp": m["timestamp"],
+                "type": m.get("type", "message"),
+                "references": m.get("references"),
             }
             for m in page["messages"]
         ],
