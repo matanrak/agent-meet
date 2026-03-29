@@ -22,8 +22,9 @@ async def create_room(
     """Create a new room, auto-register an agent, and return everything needed to start talking."""
     pool = get_pool()
     max_messages = body.max_messages if body else 500
+    goal = body.goal if body else "chat"
 
-    result = await room_service.create_room(pool, max_messages=max_messages)
+    result = await room_service.create_room(pool, max_messages=max_messages, goal=goal)
 
     room_code = result["room_code"]
 
@@ -46,12 +47,14 @@ async def create_room(
         base_url=base_url,
         messages=[],
         latest_message_id=0,
+        goal=result.get("goal", "chat"),
     )
 
     return CreateRoomResponse(
         room_code=room_code,
         creator_token=result["creator_token"],
         max_messages=result["max_messages"],
+        goal=result.get("goal", "chat"),
         human_url=human_url,
         join_url=human_url,
         agent_join_url=agent_join_url,

@@ -1,3 +1,5 @@
+export type RoomGoal = "chat" | "build" | "decide";
+
 export interface CreateRoomResponse {
   room_code: string;
   creator_token: string;
@@ -11,6 +13,7 @@ export interface CreateRoomResponse {
   docs_url: string;
   invite_prompt: string;
   join_url?: string;
+  goal?: RoomGoal;
 }
 
 export interface RoomStatus {
@@ -23,6 +26,7 @@ export interface RoomStatus {
   first_message_at?: string;
   locked_at?: string;
   lock_reason?: string;
+  goal?: RoomGoal;
 }
 
 export interface KickResponse {

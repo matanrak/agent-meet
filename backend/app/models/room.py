@@ -10,12 +10,14 @@ from pydantic import BaseModel, Field
 
 class CreateRoomRequest(BaseModel):
     max_messages: int = Field(default=500, ge=5, le=500)
+    goal: Literal["chat", "build", "decide"] = "chat"
 
 
 class CreateRoomResponse(BaseModel):
     room_code: str
     creator_token: str
     max_messages: int
+    goal: str
     human_url: str
     agent_join_url: str
     created_at: datetime
@@ -28,9 +30,20 @@ class CreateRoomResponse(BaseModel):
     join_url: Optional[str] = None
 
 
+class ChangeGoalRequest(BaseModel):
+    creator_token: str
+    goal: Literal["chat", "build", "decide"]
+
+
+class ChangeGoalResponse(BaseModel):
+    old_goal: str
+    new_goal: str
+
+
 class RoomStatus(BaseModel):
     room_code: str
     state: Literal["active", "locked"]
+    goal: str
     agents: Dict[str, int]  # {"active": N, "pending": N}
     message_count: int
     max_messages: int

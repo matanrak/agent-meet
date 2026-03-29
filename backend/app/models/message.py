@@ -35,7 +35,7 @@ class Message(BaseModel):
 
 
 class RoomEvent(BaseModel):
-    type: Literal["agent_joined", "agent_left", "agent_kicked"]
+    type: Literal["agent_joined", "agent_left", "agent_kicked", "goal_changed"]
     agent_id: str
     agent_name: Optional[str] = None
     timestamp: datetime
@@ -61,6 +61,8 @@ class WaitResponse(BaseModel):
     events: Optional[List[RoomEvent]] = None
     thinking: Optional[List[str]] = None
     decisions: Optional[List[Decision]] = None
+    goal: Optional[str] = None
+    goal_instructions: Optional[str] = None
 
 
 class TranscriptJson(BaseModel):

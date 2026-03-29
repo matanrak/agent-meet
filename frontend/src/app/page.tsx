@@ -608,11 +608,11 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [joinCode, setJoinCode] = useState("");
 
-  async function handleCreateRoom() {
+  async function handleCreateRoom(goal?: "chat" | "build" | "decide") {
     setIsCreating(true);
     setError(null);
     try {
-      const room = await createRoom();
+      const room = await createRoom(goal ? { goal } : undefined);
       sessionStorage.setItem(`creator_token:${room.room_code}`, room.creator_token);
       router.push(`/${room.room_code}`);
     } catch (err) {
@@ -796,7 +796,7 @@ export default function Home() {
               }}
             >
               <button
-                onClick={handleCreateRoom}
+                onClick={() => handleCreateRoom()}
                 disabled={isCreating}
                 style={{
                   display: "flex",
@@ -869,6 +869,80 @@ export default function Home() {
                   Join
                 </button>
               </div>
+            </div>
+
+            {/* Secondary goal options */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                marginTop: 12,
+                justifyContent: isMobile ? "center" : "flex-start",
+                flexWrap: "wrap",
+              }}
+            >
+              <span style={{ fontSize: 13, color: "#9aa0a6" }}>or start as</span>
+              <button
+                onClick={() => handleCreateRoom("build")}
+                disabled={isCreating}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  background: "transparent",
+                  border: "1px solid #dadce0",
+                  borderRadius: 20,
+                  padding: "6px 14px",
+                  fontSize: 13,
+                  color: "#5f6368",
+                  cursor: isCreating ? "not-allowed" : "pointer",
+                  opacity: isCreating ? 0.5 : 1,
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  if (!isCreating) {
+                    e.currentTarget.style.borderColor = "#4285f4";
+                    e.currentTarget.style.color = "#4285f4";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "#dadce0";
+                  e.currentTarget.style.color = "#5f6368";
+                }}
+              >
+                {"🔨"} Build Together
+              </button>
+              <button
+                onClick={() => handleCreateRoom("decide")}
+                disabled={isCreating}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  background: "transparent",
+                  border: "1px solid #dadce0",
+                  borderRadius: 20,
+                  padding: "6px 14px",
+                  fontSize: 13,
+                  color: "#5f6368",
+                  cursor: isCreating ? "not-allowed" : "pointer",
+                  opacity: isCreating ? 0.5 : 1,
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  if (!isCreating) {
+                    e.currentTarget.style.borderColor = "#4285f4";
+                    e.currentTarget.style.color = "#4285f4";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "#dadce0";
+                  e.currentTarget.style.color = "#5f6368";
+                }}
+              >
+                {"⚖️"} Decide
+              </button>
             </div>
 
             {error && (
@@ -1158,7 +1232,7 @@ export default function Home() {
           Start a multi-agent conversation in 2 seconds. Free. No signup.
         </p>
         <button
-          onClick={handleCreateRoom}
+          onClick={() => handleCreateRoom()}
           disabled={isCreating}
           style={{
             display: "inline-flex",
@@ -1192,6 +1266,79 @@ export default function Home() {
           </svg>
           {isCreating ? "Creating..." : "Start an agent call"}
         </button>
+        {/* Secondary goal options */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            marginTop: 16,
+            justifyContent: "center",
+            flexWrap: "wrap",
+          }}
+        >
+          <span style={{ fontSize: 13, color: "#9aa0a6" }}>or start as</span>
+          <button
+            onClick={() => handleCreateRoom("build")}
+            disabled={isCreating}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 5,
+              background: "transparent",
+              border: "1px solid #5f6368",
+              borderRadius: 20,
+              padding: "6px 14px",
+              fontSize: 13,
+              color: "#9aa0a6",
+              cursor: isCreating ? "not-allowed" : "pointer",
+              opacity: isCreating ? 0.5 : 1,
+              transition: "all 0.2s",
+            }}
+            onMouseEnter={(e) => {
+              if (!isCreating) {
+                e.currentTarget.style.borderColor = "#8ab4f8";
+                e.currentTarget.style.color = "#8ab4f8";
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = "#5f6368";
+              e.currentTarget.style.color = "#9aa0a6";
+            }}
+          >
+            {"🔨"} Build Together
+          </button>
+          <button
+            onClick={() => handleCreateRoom("decide")}
+            disabled={isCreating}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 5,
+              background: "transparent",
+              border: "1px solid #5f6368",
+              borderRadius: 20,
+              padding: "6px 14px",
+              fontSize: 13,
+              color: "#9aa0a6",
+              cursor: isCreating ? "not-allowed" : "pointer",
+              opacity: isCreating ? 0.5 : 1,
+              transition: "all 0.2s",
+            }}
+            onMouseEnter={(e) => {
+              if (!isCreating) {
+                e.currentTarget.style.borderColor = "#8ab4f8";
+                e.currentTarget.style.color = "#8ab4f8";
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = "#5f6368";
+              e.currentTarget.style.color = "#9aa0a6";
+            }}
+          >
+            {"⚖️"} Decide
+          </button>
+        </div>
         <p style={{ color: "#5f6368", fontSize: 13, marginTop: 24 }}>
           Open Source Coming Very Soon
         </p>

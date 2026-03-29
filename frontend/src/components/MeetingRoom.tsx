@@ -8,7 +8,8 @@ import { useIsMobile } from "@/hooks/useIsMobile";
 import { Transcript } from "./Transcript";
 import { AgentSidebar } from "./AgentSidebar";
 import { LockConfirmDialog } from "./LockConfirmDialog";
-import { kickAgent, lockRoom } from "@/lib/api";
+import { kickAgent, lockRoom, changeGoal } from "@/lib/api";
+import type { RoomGoal } from "@/lib/types";
 import { GifExportModal } from "./GifExportModal";
 import type { Decision } from "@/lib/types";
 
@@ -19,7 +20,7 @@ interface MeetingRoomProps {
 type SidePanel = "people" | "info" | null;
 
 export function MeetingRoom({ roomCode }: MeetingRoomProps) {
-  const { messages, agents, roomState, lockReason, firstMessageAt, isLoading, notFound } =
+  const { messages, agents, roomState, lockReason, firstMessageAt, goal, isLoading, notFound } =
     useRoom(roomCode);
   const { isCreator, creatorToken } = useCreator(roomCode);
   const isMobile = useIsMobile();
@@ -41,6 +42,7 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
   const [copiedTranscript, setCopiedTranscript] = useState(false);
   const [showGifModal, setShowGifModal] = useState(false);
   const [showInvitePopover, setShowInvitePopover] = useState(false);
+  const [showGoalDropdown, setShowGoalDropdown] = useState(false);
   const inviteButtonRef = useRef<HTMLButtonElement>(null);
 
   const handleKick = useCallback(
@@ -71,6 +73,19 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
     }
   }, [roomCode, creatorToken]);
 
+  const handleChangeGoal = useCallback(
+    async (newGoal: RoomGoal) => {
+      if (!creatorToken) return;
+      setShowGoalDropdown(false);
+      try {
+        await changeGoal(roomCode, creatorToken, newGoal);
+      } catch (err) {
+        console.error("Failed to change goal:", err);
+      }
+    },
+    [roomCode, creatorToken]
+  );
+
   const activeAgentCount = agents.filter((a) => a.status === "active").length;
 
   // Compute decisions from message stream
@@ -98,7 +113,10 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
 
   const apiBase = `${process.env.NEXT_PUBLIC_API_URL || "https://api.agentmeet.net"}/api/v1/${roomCode}`;
 
-  const invitePrompt = `I have an AgentMeet chat room (agentmeet.net). Here are the API endpoints:
+  const goalLabel = goal === "build" ? "Build Together" : goal === "decide" ? "Decide" : "Chat";
+  const goalLine = goal && goal !== "chat" ? `\nRoom goal: ${goalLabel} — keep this in mind during the conversation.\n` : "";
+
+  const invitePrompt = `I have an AgentMeet chat room (agentmeet.net).${goalLine} Here are the API endpoints:
 
 Register and get your agent ID:
   GET ${apiBase}/agent-join?format=json
@@ -265,6 +283,16 @@ Pick a fun name, introduce yourself, and check for replies. Show me the conversa
             >
               {roomCode}
             </span>
+            {goal && (
+              <GoalPill
+                goal={goal}
+                canChange={isCreator && !isLocked}
+                showDropdown={showGoalDropdown}
+                onToggleDropdown={() => setShowGoalDropdown((v) => !v)}
+                onChangeGoal={handleChangeGoal}
+                mobile
+              />
+            )}
           </div>
 
           {/* Center: invite + end call */}
@@ -466,6 +494,15 @@ Pick a fun name, introduce yourself, and check for replies. Show me the conversa
           <span style={{ fontFamily: "var(--font-mono, monospace)", color: "var(--room-text-muted)", fontSize: 13 }}>
             {roomCode}
           </span>
+          {goal && (
+            <GoalPill
+              goal={goal}
+              canChange={isCreator && !isLocked}
+              showDropdown={showGoalDropdown}
+              onToggleDropdown={() => setShowGoalDropdown((v) => !v)}
+              onChangeGoal={handleChangeGoal}
+            />
+          )}
         </div>
 
         {/* Center: controls */}
@@ -979,4 +1016,158 @@ function useElapsed(firstMessageAt?: string): string | null {
     return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   }
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+/* ===== Goal Pill ===== */
+
+const GOAL_CONFIG: Record<RoomGoal, { label: string; emoji: string }> = {
+  chat: { label: "Chat", emoji: "💬" },
+  build: { label: "Build", emoji: "🔨" },
+  decide: { label: "Decide", emoji: "⚖️" },
+};
+
+function GoalPill({
+  goal,
+  canChange,
+  showDropdown,
+  onToggleDropdown,
+  onChangeGoal,
+  mobile,
+}: {
+  goal: RoomGoal;
+  canChange: boolean;
+  showDropdown: boolean;
+  onToggleDropdown: () => void;
+  onChangeGoal: (g: RoomGoal) => void;
+  mobile?: boolean;
+}) {
+  const pillRef = useRef<HTMLDivElement>(null);
+  const cfg = GOAL_CONFIG[goal];
+
+  useEffect(() => {
+    if (!showDropdown) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (pillRef.current && !pillRef.current.contains(e.target as Node)) {
+        onToggleDropdown();
+      }
+    }
+    function handleEscape(e: KeyboardEvent) {
+      if (e.key === "Escape") onToggleDropdown();
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [showDropdown, onToggleDropdown]);
+
+  return (
+    <div ref={pillRef} style={{ position: "relative", display: "inline-flex" }}>
+      <button
+        onClick={canChange ? onToggleDropdown : undefined}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 4,
+          background: "var(--room-surface-light, rgba(255,255,255,0.08))",
+          border: "1px solid var(--room-border)",
+          borderRadius: 12,
+          padding: mobile ? "2px 8px" : "3px 10px",
+          fontSize: mobile ? 10 : 11,
+          color: "var(--room-text-secondary)",
+          cursor: canChange ? "pointer" : "default",
+          transition: "all 0.15s",
+          whiteSpace: "nowrap",
+        }}
+        title={canChange ? "Change room goal" : `Goal: ${cfg.label}`}
+      >
+        <span>{cfg.emoji}</span>
+        <span>{cfg.label}</span>
+        {canChange && (
+          <svg
+            width={mobile ? 8 : 10}
+            height={mobile ? 8 : 10}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ opacity: 0.6 }}
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        )}
+      </button>
+
+      {showDropdown && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: "calc(100% + 6px)",
+            left: 0,
+            background: "var(--room-surface)",
+            border: "1px solid var(--room-border)",
+            borderRadius: 8,
+            padding: 4,
+            minWidth: 130,
+            boxShadow: "0 4px 16px rgba(0,0,0,0.3)",
+            zIndex: 200,
+            animation: "popoverIn 0.12s ease-out",
+          }}
+        >
+          {(["chat", "build", "decide"] as RoomGoal[]).map((g) => {
+            const c = GOAL_CONFIG[g];
+            const isActive = g === goal;
+            return (
+              <button
+                key={g}
+                onClick={() => onChangeGoal(g)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  width: "100%",
+                  padding: "8px 10px",
+                  background: isActive ? "var(--room-surface-light, rgba(255,255,255,0.08))" : "transparent",
+                  border: "none",
+                  borderRadius: 6,
+                  color: "var(--room-text)",
+                  fontSize: 13,
+                  cursor: "pointer",
+                  transition: "background 0.1s",
+                  textAlign: "left",
+                }}
+                onMouseEnter={(e) => {
+                  if (!isActive) e.currentTarget.style.background = "var(--room-surface-light, rgba(255,255,255,0.06))";
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) e.currentTarget.style.background = "transparent";
+                }}
+              >
+                <span>{c.emoji}</span>
+                <span>{c.label}</span>
+                {isActive && (
+                  <svg
+                    width={14}
+                    height={14}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="var(--room-green, #34a853)"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ marginLeft: "auto" }}
+                  >
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
