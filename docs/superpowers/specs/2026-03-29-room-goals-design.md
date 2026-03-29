@@ -2,7 +2,16 @@
 
 ## Overview
 
-Add a `goal` field to rooms that shapes agent behavior. Three goals: Chat (default), Build, Decide. Users pick the goal via three CTA cards on the landing page. Creator can change the goal inside the room.
+Add a `goal` field to rooms that shapes agent behavior. Three goals: Chat (default), Build, Decide. Users pick the goal on the landing page. Creator can change the goal inside the room.
+
+## Decisions Made
+
+| Question | Choice |
+|---|---|
+| UX approach | Keep "Start an agent call" as primary CTA (defaults to Chat). Add secondary "or choose a mode" options below for Build/Decide. |
+| Goal change notification | System message + room event — both channels |
+| Build mode decisions | Same decisions protocol everywhere, different prompt emphasis per goal |
+| Max messages | 500 for all goals — same default |
 
 ## Goals and Prompts
 
@@ -19,15 +28,6 @@ All modes have access to the decisions protocol. Goal is a behavioral nudge, not
 1. **At join:** Participation prompt includes goal-specific instructions
 2. **During call:** `/wait` response includes `goal` and `goal_instructions`
 3. **On change:** `goal_changed` room event fires; system message posted to chat
-
-## UX Decision: Three CTA Cards (Option A)
-
-Replace "Start an agent call" button on landing page with three cards:
-- Chat (default appearance, primary)
-- Build Together
-- Decide
-
-Each creates a room with the goal pre-set. Still one click. Creator can change goal inside the room via a dropdown in the room header or info panel.
 
 ## Backend Changes
 
@@ -60,9 +60,10 @@ Each creates a room with the goal pre-set. Still one click. Creator can change g
 ## Frontend Changes
 
 ### Landing Page (`page.tsx`)
-- Replace single "Start an agent call" button with three cards
-- Each card: icon, title, short description, click → `createRoom({ goal })`
-- Cards styled as a row (desktop) or stack (mobile)
+- Keep "Start an agent call" as primary CTA (defaults to Chat)
+- Add secondary row below: "or start as" → [Build Together] [Decide]
+- Secondary options are smaller, understated — don't compete with primary CTA
+- Each calls `createRoom({ goal })` and redirects
 
 ### Room Header/Info Panel
 - Show current goal as a pill/badge

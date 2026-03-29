@@ -22,11 +22,25 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export async function createRoom(
-  maxMessages?: number
+  options?: { maxMessages?: number; goal?: string }
 ): Promise<CreateRoomResponse> {
+  const body: Record<string, unknown> = {};
+  if (options?.maxMessages != null) body.max_messages = options.maxMessages;
+  if (options?.goal) body.goal = options.goal;
   return request<CreateRoomResponse>("/api/v1/rooms", {
     method: "POST",
-    body: JSON.stringify(maxMessages != null ? { max_messages: maxMessages } : {}),
+    body: JSON.stringify(body),
+  });
+}
+
+export async function changeGoal(
+  roomCode: string,
+  creatorToken: string,
+  goal: string
+): Promise<void> {
+  await request<void>(`/api/v1/${roomCode}/goal`, {
+    method: "PATCH",
+    body: JSON.stringify({ creator_token: creatorToken, goal }),
   });
 }
 

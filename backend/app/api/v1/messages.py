@@ -16,6 +16,7 @@ from app.models.message import (
 )
 from app.services import agent_service, room_service
 from app.models.message import Decision
+from app.services.goal_instructions import get_goal_instructions
 from app.services.message_service import MessageError, get_decisions, get_messages_after, send_message
 from app.services.room_state import get_or_create_room_state
 
@@ -83,6 +84,8 @@ async def wait_for_messages(
             content={"error": "unknown_agent", "message": "agent_id not registered in this room"},
         )
 
+    room_goal = room.get("goal", "chat")
+
     room_state = get_or_create_room_state(room_code)
     deadline = asyncio.get_event_loop().time() + timeout
     collected_events = []
@@ -104,6 +107,8 @@ async def wait_for_messages(
                 timeout=False,
                 active_agents=await _active_count(),
                 events=collected_events if collected_events else None,
+                goal=room_goal,
+                goal_instructions=get_goal_instructions(room_goal),
             )
 
         # 2. Clear event BEFORE checking messages to prevent lost wakeups.
@@ -137,10 +142,11 @@ async def wait_for_messages(
                 collected_events.extend(room_state.pending_events)
                 room_state.pending_events = []
 
-            # Check room lock status
+            # Check room lock status and refresh goal
             room_now = await room_service.get_room(pool, room_code)
             is_locked = room_now["state"] == "locked" if room_now else False
             lock_reason = room_now.get("lock_reason") if is_locked and room_now else None
+            room_goal = room_now.get("goal", "chat") if room_now else room_goal
 
             # Get thinking agents and decisions
             thinking = list(room_state.thinking_agents.values()) or None
@@ -157,6 +163,8 @@ async def wait_for_messages(
                 events=collected_events if collected_events else None,
                 thinking=thinking,
                 decisions=decisions,
+                goal=room_goal,
+                goal_instructions=get_goal_instructions(room_goal),
             )
 
         # 4. Check if room is locked
@@ -165,6 +173,7 @@ async def wait_for_messages(
             if room_state.pending_events:
                 collected_events.extend(room_state.pending_events)
                 room_state.pending_events = []
+            room_goal = room_now.get("goal", "chat")
             return WaitResponse(
                 messages=[],
                 latest_message_id=after,
@@ -173,6 +182,8 @@ async def wait_for_messages(
                 timeout=False,
                 active_agents=await _active_count(),
                 events=collected_events if collected_events else None,
+                goal=room_goal,
+                goal_instructions=get_goal_instructions(room_goal),
             )
 
         # 5. Collect any pending events so far
@@ -190,6 +201,8 @@ async def wait_for_messages(
                 timeout=True,
                 active_agents=await _active_count(),
                 events=collected_events if collected_events else None,
+                goal=room_goal,
+                goal_instructions=get_goal_instructions(room_goal),
             )
 
         try:
@@ -220,6 +233,7 @@ async def wait_for_messages(
                 room_now = await room_service.get_room(pool, room_code)
                 is_locked = room_now["state"] == "locked" if room_now else False
                 lock_reason = room_now.get("lock_reason") if is_locked and room_now else None
+                room_goal = room_now.get("goal", "chat") if room_now else room_goal
                 thinking = list(room_state.thinking_agents.values()) or None
                 decisions_list = await get_decisions(pool, room_code)
                 decisions = [Decision(**d) for d in decisions_list] if decisions_list else None
@@ -233,6 +247,8 @@ async def wait_for_messages(
                     events=collected_events if collected_events else None,
                     thinking=thinking,
                     decisions=decisions,
+                    goal=room_goal,
+                    goal_instructions=get_goal_instructions(room_goal),
                 )
 
             thinking = list(room_state.thinking_agents.values()) or None
@@ -244,4 +260,6 @@ async def wait_for_messages(
                 active_agents=await _active_count(),
                 events=collected_events if collected_events else None,
                 thinking=thinking,
+                goal=room_goal,
+                goal_instructions=get_goal_instructions(room_goal),
             )

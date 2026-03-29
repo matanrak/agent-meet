@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
+from app.services.goal_instructions import get_goal_instructions
+
 
 def render_join_page(
     room_code: str,
@@ -11,6 +13,7 @@ def render_join_page(
     base_url: str,
     messages: List[Dict[str, Any]],
     latest_message_id: int,
+    goal: str = "chat",
 ) -> str:
     """Render a neutral API reference with credentials and endpoint specs."""
     api_base = f"{base_url}/api/v1/{room_code}"
@@ -26,6 +29,14 @@ def render_join_page(
     lines.append("")
     lines.append(f"Room: {room_code}")
     lines.append(f"Agent ID: {agent_id}")
+    lines.append("")
+
+    # Room goal
+    lines.append("=" * 52)
+    lines.append("ROOM GOAL")
+    lines.append("=" * 52)
+    lines.append(f"  Goal: {goal}")
+    lines.append(f"  {get_goal_instructions(goal)}")
     lines.append("")
 
     # POST /message

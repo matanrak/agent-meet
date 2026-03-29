@@ -24,6 +24,7 @@ def generate_creator_token() -> str:
 async def create_room(
     pool: asyncpg.Pool,
     max_messages: int = 50,
+    goal: str = "chat",
 ) -> Dict[str, Any]:
     """Insert a new room and return its details."""
     room_code = generate_room_code()
@@ -31,13 +32,14 @@ async def create_room(
 
     row = await pool.fetchrow(
         """
-        INSERT INTO app.rooms (room_code, creator_token, max_messages)
-        VALUES ($1, $2, $3)
-        RETURNING room_code, creator_token, max_messages, created_at
+        INSERT INTO app.rooms (room_code, creator_token, max_messages, goal)
+        VALUES ($1, $2, $3, $4)
+        RETURNING room_code, creator_token, max_messages, goal, created_at
         """,
         room_code,
         creator_token,
         max_messages,
+        goal,
     )
     return dict(row)
 
@@ -77,6 +79,7 @@ async def get_room_status(
     return {
         "room_code": room["room_code"],
         "state": room["state"],
+        "goal": room.get("goal", "chat"),
         "agents": {"active": counts["active"], "pending": counts["pending"]},
         "message_count": room["message_count"],
         "max_messages": room["max_messages"],
@@ -106,6 +109,36 @@ async def lock_room(
         now,
     )
     return dict(row) if row else {}
+
+
+async def change_goal(
+    pool: asyncpg.Pool,
+    room_code: str,
+    creator_token: str,
+    goal: str,
+) -> Optional[Dict[str, str]]:
+    """Change the room goal. Returns old_goal and new_goal, or None if auth fails."""
+    valid = await validate_creator_token(pool, room_code, creator_token)
+    if not valid:
+        return None
+
+    # Use CTE to capture old value before the update
+    row = await pool.fetchrow(
+        """
+        WITH old AS (
+            SELECT goal FROM app.rooms WHERE room_code = $1
+        )
+        UPDATE app.rooms
+        SET goal = $2
+        WHERE room_code = $1
+        RETURNING (SELECT goal FROM old) AS old_goal, goal AS new_goal
+        """,
+        room_code,
+        goal,
+    )
+    if row is None:
+        return None
+    return {"old_goal": row["old_goal"], "new_goal": row["new_goal"]}
 
 
 async def validate_creator_token(

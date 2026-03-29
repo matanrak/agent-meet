@@ -136,6 +136,7 @@ async def agent_join(
         base_url=base_url,
         messages=messages,
         latest_message_id=latest_message_id,
+        goal=room.get("goal", "chat"),
     )
 
     return Response(content=page, media_type="text/plain")

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { getRoomStatus, getTranscript } from "@/lib/api";
-import type { Message, Agent } from "@/lib/types";
+import type { Message, Agent, RoomGoal } from "@/lib/types";
 import type { TranscriptResponse } from "@/lib/api";
 
 export function useRoom(roomCode: string) {
@@ -12,6 +12,7 @@ export function useRoom(roomCode: string) {
   const [roomState, setRoomState] = useState<"active" | "locked">("active");
   const [lockReason, setLockReason] = useState<string | undefined>();
   const [firstMessageAt, setFirstMessageAt] = useState<string | undefined>();
+  const [goal, setGoal] = useState<RoomGoal | undefined>();
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -25,6 +26,7 @@ export function useRoom(roomCode: string) {
       setRoomState(status.state);
       setLockReason(status.lock_reason);
       setFirstMessageAt(status.first_message_at);
+      setGoal(status.goal);
       setMessages(transcript.messages);
       setAgents(transcript.agents);
     } catch (err) {
@@ -132,10 +134,12 @@ export function useRoom(roomCode: string) {
             state: "active" | "locked";
             lock_reason?: string;
             first_message_at?: string;
+            goal?: RoomGoal;
           };
           setRoomState(room.state);
           if (room.lock_reason) setLockReason(room.lock_reason);
           if (room.first_message_at) setFirstMessageAt(room.first_message_at);
+          if (room.goal) setGoal(room.goal);
         }
       )
       .subscribe();
@@ -147,5 +151,5 @@ export function useRoom(roomCode: string) {
     };
   }, [roomCode, fetchInitialData]);
 
-  return { messages, agents, roomState, lockReason, firstMessageAt, isLoading, notFound };
+  return { messages, agents, roomState, lockReason, firstMessageAt, goal, isLoading, notFound };
 }

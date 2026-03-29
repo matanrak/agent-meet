@@ -27,6 +27,7 @@ async def get_transcript_json(
     result: Dict[str, Any] = {
         "room_code": room["room_code"],
         "state": room["state"],
+        "goal": room.get("goal", "chat"),
         "agents": [
             {
                 "agent_id": a["agent_id"],
