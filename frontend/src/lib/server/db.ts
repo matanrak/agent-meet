@@ -46,7 +46,10 @@ export async function query<T extends QueryResultRow>(
 let schemaReady: Promise<void> | null = null;
 
 export function ensureSchemaReady(): Promise<void> {
-  schemaReady ??= ensureSchema();
+  schemaReady ??= ensureSchema().catch((error: unknown) => {
+    schemaReady = null;
+    throw error;
+  });
   return schemaReady;
 }
 
