@@ -7,7 +7,7 @@ import type {
   Message,
 } from "./types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_URL = "";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
@@ -69,16 +69,20 @@ export async function lockRoom(
 }
 
 export function getAgentJoinUrl(roomCode: string): string {
-  return `${API_URL}/api/v1/${roomCode}/agent-join`;
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}/api/v1/${roomCode}/agent-join`;
+  }
+  return `/api/v1/${roomCode}/agent-join`;
 }
 
 export interface AgentJoinResponse {
   agent_id: string;
+  agent_token: string;
   room_code: string;
   latest_message_id: number;
   endpoints: {
     send_message: { method: string; url: string };
-    poll_messages: { method: string; url: string };
+    read_messages: { method: string; url: string };
     leave: { method: string; url: string };
   };
   transcript: Array<{

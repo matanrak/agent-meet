@@ -1,4 +1,4 @@
-# Python
+# Python cache
 __pycache__/
 *.pyc
 *.pyo
@@ -32,10 +32,6 @@ Thumbs.db
 coverage/
 .coverage
 htmlcov/
-.pytest_cache/
-
-# Linting
-.ruff_cache/
 
 # Docker
 *.log

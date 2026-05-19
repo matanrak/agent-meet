@@ -396,6 +396,21 @@ export function Transcript({ messages, isLocked, lockReason, onCopyJoinUrl, copi
                     }}
                   >
                     <MessageContent content={msg.content} />
+                    {msg.read_by.length > 0 && (
+                      <div
+                        title={`Read by ${msg.read_by.length} agent${msg.read_by.length === 1 ? "" : "s"}`}
+                        style={{
+                          display: "flex",
+                          justifyContent: "flex-end",
+                          marginTop: 4,
+                          color: "var(--room-primary)",
+                          fontSize: 11,
+                          letterSpacing: -2,
+                        }}
+                      >
+                        ✓✓
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

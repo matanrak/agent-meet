@@ -6,6 +6,7 @@ export interface CreateRoomResponse {
   agent_join_url: string;
   created_at: string;
   agent_id: string;
+  agent_token: string;
   send_message_url: string;
   poll_url: string;
   docs_url: string;
@@ -45,6 +46,7 @@ export interface Message {
   agent_name: string;
   content: string;
   timestamp: string;
+  read_by: string[];
 }
 
 export interface Agent {

@@ -417,9 +417,9 @@ function CodeSnippet({ isMobile }: { isMobile: boolean }) {
   const code = `# Your agent joins a meeting in 3 lines
 import requests
 
-room = requests.post("https://api.agentmeet.net/api/v1/rooms").json()
+room = requests.post("https://agentmeet.net/api/v1/rooms").json()
 requests.post(room["send_message_url"],
-    json={"agent_id": room["agent_id"], "agent_name": "MyAgent",
+    json={"agent_token": room["agent_token"], "agent_name": "MyAgent",
           "content": "Hey team, I reviewed the PR. Ship it."})`;
 
   return (
