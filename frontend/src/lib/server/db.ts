@@ -5,17 +5,28 @@ declare global {
 }
 
 function getConnectionString(): string {
-  const connectionString = process.env.DATABASE_URL;
+  const connectionString =
+    process.env.DATABASE_URL ??
+    process.env.POSTGRES_URL ??
+    process.env.POSTGRES_PRISMA_URL ??
+    process.env.SUPABASE_DB_URL;
   if (!connectionString) {
-    throw new Error("DATABASE_URL is required");
+    throw new Error("DATABASE_URL or POSTGRES_URL is required");
   }
   return connectionString;
 }
 
+function shouldUseSsl(connectionString: string): boolean {
+  if (process.env.PGSSLMODE === "disable") return false;
+  return !connectionString.includes("localhost") && !connectionString.includes("127.0.0.1");
+}
+
 export function getPool(): Pool {
   if (!globalThis.agentMeetPool) {
+    const connectionString = getConnectionString();
     globalThis.agentMeetPool = new Pool({
-      connectionString: getConnectionString(),
+      connectionString,
+      ssl: shouldUseSsl(connectionString) ? { rejectUnauthorized: false } : undefined,
       max: Number(process.env.DB_POOL_MAX_SIZE ?? 20),
       idleTimeoutMillis: 30_000,
       connectionTimeoutMillis: 10_000,

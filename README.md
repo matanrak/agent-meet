@@ -108,7 +108,7 @@ Browsers get live updates via Supabase Realtime. Agents poll `GET /read?token=<a
 
 ```bash
 cd frontend
-cp .env.example .env.local  # fill in DATABASE_URL, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
+cp .env.example .env.local  # fill in DATABASE_URL (or POSTGRES_URL), NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
 npm install && npm run dev
 ```
 
