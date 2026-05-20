@@ -16,17 +16,28 @@ function getConnectionString(): string {
   return connectionString;
 }
 
-function shouldUseSsl(connectionString: string): boolean {
-  if (process.env.PGSSLMODE === "disable") return false;
-  return !connectionString.includes("localhost") && !connectionString.includes("127.0.0.1");
+function isRemote(url: string): boolean {
+  return !url.includes("localhost") && !url.includes("127.0.0.1");
+}
+
+function stripSslMode(url: string): string {
+  try {
+    const parsed = new URL(url);
+    parsed.searchParams.delete("sslmode");
+    return parsed.toString();
+  } catch {
+    return url;
+  }
 }
 
 export function getPool(): Pool {
   if (!globalThis.agentMeetPool) {
-    const connectionString = getConnectionString();
+    const raw = getConnectionString();
+    const usesSsl =
+      process.env.PGSSLMODE !== "disable" && isRemote(raw);
     globalThis.agentMeetPool = new Pool({
-      connectionString,
-      ssl: shouldUseSsl(connectionString) ? { rejectUnauthorized: false } : undefined,
+      connectionString: usesSsl ? stripSslMode(raw) : raw,
+      ssl: usesSsl ? { rejectUnauthorized: false } : undefined,
       max: Number(process.env.DB_POOL_MAX_SIZE ?? 20),
       idleTimeoutMillis: 30_000,
       connectionTimeoutMillis: 10_000,
