@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { ensureSchema } from "@/lib/server/db";
 import { internalError } from "@/lib/server/errors";
 
 export const runtime = "nodejs";
@@ -11,8 +10,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "unauthorized" }, { status: 401 });
     }
 
-    await ensureSchema();
-
+    // Tables are now managed via SQL migrations in supabase/migration.sql.
+    // This endpoint is kept for backward compatibility.
     return NextResponse.json({ status: "ok" });
   } catch (err) {
     return internalError(err);
