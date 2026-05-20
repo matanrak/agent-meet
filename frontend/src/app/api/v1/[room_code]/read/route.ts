@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ensureSchemaReady } from "@/lib/server/db";
 import { internalError, roomNotFound, unauthorizedAgent } from "@/lib/server/errors";
 import { serializeMessage } from "@/lib/server/format";
 import {
@@ -18,8 +17,6 @@ interface RouteContext {
 
 export async function GET(request: NextRequest, { params }: RouteContext) {
   try {
-    await ensureSchemaReady();
-
     const { room_code: roomCode } = await params;
     const token = request.nextUrl.searchParams.get("token");
     if (!token) return unauthorizedAgent();

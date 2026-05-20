@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ensureSchemaReady } from "@/lib/server/db";
 import { createRoom, registerAgent } from "@/lib/server/store";
 import { internalError, invalidBody } from "@/lib/server/errors";
 import { renderJoinPage } from "@/lib/server/joinPage";
@@ -9,8 +8,6 @@ export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
   try {
-    await ensureSchemaReady();
-
     let maxMessages = 500;
 
     if ((request.headers.get("content-length") ?? "0") !== "0") {
@@ -50,7 +47,7 @@ export async function POST(request: NextRequest) {
         human_url: humanUrl,
         join_url: humanUrl,
         agent_join_url: `${apiBase}/agent-join`,
-        created_at: room.created_at.toISOString(),
+        created_at: room.created_at,
         agent_id: agent.agent_id,
         agent_token: agent.agent_token!,
         send_message_url: `${apiBase}/message`,

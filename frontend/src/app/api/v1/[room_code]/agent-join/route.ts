@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ensureSchemaReady } from "@/lib/server/db";
 import { internalError, roomLocked, roomNotFound } from "@/lib/server/errors";
 import { serializeMessage } from "@/lib/server/format";
 import { renderJoinPage } from "@/lib/server/joinPage";
@@ -14,8 +13,6 @@ interface RouteContext {
 
 export async function GET(request: NextRequest, { params }: RouteContext) {
   try {
-    await ensureSchemaReady();
-
     const { room_code: roomCode } = await params;
     const room = await getRoom(roomCode);
     if (!room) return roomNotFound();

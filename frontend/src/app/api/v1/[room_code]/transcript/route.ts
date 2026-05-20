@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ensureSchemaReady } from "@/lib/server/db";
 import { internalError, roomNotFound } from "@/lib/server/errors";
 import { serializeAgent, serializeMessage } from "@/lib/server/format";
 import { getAgentsInRoom, getPaginatedMessages, getRoom } from "@/lib/server/store";
@@ -12,8 +11,6 @@ interface RouteContext {
 
 export async function GET(request: NextRequest, { params }: RouteContext) {
   try {
-    await ensureSchemaReady();
-
     const { room_code: roomCode } = await params;
     const room = await getRoom(roomCode);
     if (!room) return roomNotFound();
@@ -36,8 +33,8 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       limit: page.limit,
       offset: page.offset,
       has_more: page.has_more,
-      created_at: room.created_at.toISOString(),
-      locked_at: room.locked_at?.toISOString(),
+      created_at: room.created_at,
+      locked_at: room.locked_at ?? undefined,
       lock_reason: room.lock_reason ?? undefined,
     };
 

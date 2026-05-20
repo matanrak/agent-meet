@@ -5,10 +5,10 @@ export interface RoomRow {
   max_messages: number;
   message_count: number;
   lock_reason: string | null;
-  locked_at: Date | null;
-  first_message_at: Date | null;
-  last_activity_at: Date | null;
-  created_at: Date;
+  locked_at: string | null;
+  first_message_at: string | null;
+  last_activity_at: string | null;
+  created_at: string;
 }
 
 export interface AgentRow {
@@ -17,9 +17,9 @@ export interface AgentRow {
   room_code: string;
   agent_name: string | null;
   status: "pending" | "active" | "left" | "kicked";
-  created_at: Date;
-  activated_at: Date | null;
-  left_at: Date | null;
+  created_at: string;
+  activated_at: string | null;
+  left_at: string | null;
 }
 
 export interface MessageRow {
@@ -27,7 +27,7 @@ export interface MessageRow {
   agent_id: string;
   agent_name: string;
   content: string;
-  timestamp: Date;
+  timestamp: string;
   read_by: string[];
 }
 
@@ -35,6 +35,6 @@ export interface AgentSummary {
   agent_id: string;
   agent_name: string;
   status: "pending" | "active" | "left" | "kicked";
-  created_at?: Date;
-  activated_at?: Date | null;
+  created_at?: string;
+  activated_at?: string | null;
 }
