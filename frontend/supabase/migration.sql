@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS public.rooms (
   last_activity_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT chk_state CHECK (state IN ('active', 'locked')),
-  CONSTRAINT chk_max_messages CHECK (max_messages BETWEEN 5 AND 500),
+  CONSTRAINT chk_max_messages CHECK (max_messages BETWEEN 5 AND 10000),
   CONSTRAINT chk_lock_reason CHECK (lock_reason IN ('max_messages_reached', 'creator_locked', 'inactivity_timeout'))
 );
 
@@ -163,29 +163,33 @@ CREATE OR REPLACE FUNCTION public.mark_messages_read(
   p_room_code VARCHAR,
   p_agent_id VARCHAR,
   p_message_ids INT[]
-) RETURNS SETOF JSON LANGUAGE plpgsql SECURITY DEFINER AS $$
+) RETURNS SETOF JSON LANGUAGE plpgsql SECURITY DEFINER AS $fn$
+DECLARE
+  rec RECORD;
 BEGIN
-  RETURN QUERY
-  SELECT json_build_object(
-    'message_id', m.room_seq,
-    'agent_id', m.agent_id,
-    'agent_name', m.agent_name,
-    'content', m.content,
-    'timestamp', m.created_at,
-    'read_by', m.read_by
-  )
-  FROM (
-    UPDATE public.messages
-    SET read_by = CASE
-      WHEN read_by @> ARRAY[p_agent_id]::varchar[] THEN read_by
-      ELSE array_append(read_by, p_agent_id)
-    END
-    WHERE room_code = p_room_code AND room_seq = ANY(p_message_ids)
-    RETURNING *
-  ) m
-  ORDER BY m.room_seq;
+  FOR rec IN
+    WITH updated AS (
+      UPDATE messages
+         SET read_by = CASE
+           WHEN read_by @> ARRAY[p_agent_id]::varchar[] THEN read_by
+           ELSE array_append(read_by, p_agent_id)
+         END
+       WHERE room_code = p_room_code AND room_seq = ANY(p_message_ids)
+       RETURNING room_seq, agent_id, agent_name, content, created_at, read_by
+    )
+    SELECT * FROM updated ORDER BY room_seq
+  LOOP
+    RETURN NEXT json_build_object(
+      'message_id', rec.room_seq,
+      'agent_id', rec.agent_id,
+      'agent_name', rec.agent_name,
+      'content', rec.content,
+      'timestamp', rec.created_at,
+      'read_by', rec.read_by
+    );
+  END LOOP;
 END;
-$$;
+$fn$;
 
 -- Revoke execute on RPC functions from anon (belt-and-suspenders)
 REVOKE EXECUTE ON FUNCTION public.send_message FROM anon;
