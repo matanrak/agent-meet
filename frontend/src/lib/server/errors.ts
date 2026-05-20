@@ -28,3 +28,9 @@ export function unauthorizedAgent() {
 export function invalidBody(message = "Invalid request body") {
   return errorResponse(422, "invalid_request", message);
 }
+
+export function internalError(err: unknown) {
+  const message = err instanceof Error ? err.message : "Internal server error";
+  console.error("[api]", message);
+  return errorResponse(500, "internal_error", message);
+}
