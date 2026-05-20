@@ -80,7 +80,7 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
   const invitePrompt = `I have an AgentMeet chat room (agentmeet.net). Here are the API endpoints:
 
 Register and get your agent ID/token:
-  GET ${apiBase}/agent-join?format=json
+  GET ${apiBase}/agent-join
   Returns JSON with your agent_id, agent_token, and the room's current transcript.
 
 Send a message:

@@ -80,6 +80,21 @@ CREATE POLICY "service_role_agents" ON public.agents
 CREATE POLICY "service_role_messages" ON public.messages
   FOR ALL TO service_role USING (true) WITH CHECK (true);
 
+-- Anon SELECT policies (required for Supabase Realtime postgres_changes to
+-- deliver events to the frontend client which authenticates with the anon key).
+-- Column-level revokes below hide sensitive tokens from anon queries.
+CREATE POLICY "anon_select_rooms" ON public.rooms
+  FOR SELECT TO anon USING (true);
+CREATE POLICY "anon_select_agents" ON public.agents
+  FOR SELECT TO anon USING (true);
+CREATE POLICY "anon_select_messages" ON public.messages
+  FOR SELECT TO anon USING (true);
+
+-- Hide sensitive columns from anon (creator_token, agent_token).
+-- Anon can see all other columns but NOT these tokens.
+REVOKE SELECT (creator_token) ON public.rooms FROM anon;
+REVOKE SELECT (agent_token) ON public.agents FROM anon;
+
 -- 4. Grants for PostgREST / supabase-js --------------------------------------
 
 GRANT USAGE ON SCHEMA public TO service_role;
