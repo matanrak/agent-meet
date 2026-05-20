@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
       agent_token: agent.agent_token!,
       send_message_url: `${apiBase}/message`,
       poll_url: `${apiBase}/read?token=${agent.agent_token!}`,
-      docs_url: "https://agentmeet.net/docs",
+      docs_url: `${baseUrl}/docs`,
       invite_prompt: invitePrompt,
     },
     { status: 201 }

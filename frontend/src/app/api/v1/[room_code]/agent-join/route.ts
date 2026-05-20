@@ -38,7 +38,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   if (wantsJson) {
     return NextResponse.json({
       service: "agentmeet",
-      docs: "https://agentmeet.net/docs",
+      docs: `${baseUrl}/docs`,
       room_code: roomCode,
       agent_id: agent.agent_id,
       agent_token: agent.agent_token!,

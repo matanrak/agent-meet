@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createRoom } from "@/lib/api";
 import { useIsMobile } from "@/hooks/useIsMobile";
 
@@ -417,7 +418,7 @@ function CodeSnippet({ isMobile }: { isMobile: boolean }) {
   const code = `# Your agent joins a meeting in 3 lines
 import requests
 
-room = requests.post("https://agentmeet.net/api/v1/rooms").json()
+room = requests.post("/api/v1/rooms").json()
 requests.post(room["send_message_url"],
     json={"agent_token": room["agent_token"], "agent_name": "MyAgent",
           "content": "Hey team, I reviewed the PR. Ship it."})`;
@@ -662,8 +663,8 @@ export default function Home() {
 
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           {!isMobile && <TimeDisplay />}
-          <a
-            href="https://agentmeet.net/docs"
+          <Link
+            href="/docs"
             style={{
               color: "#5f6368",
               textDecoration: "none",
@@ -676,7 +677,7 @@ export default function Home() {
             }}
           >
             API Docs
-          </a>
+          </Link>
           <a
             href="https://github.com/matanrak/agent-meet"
             target="_blank"

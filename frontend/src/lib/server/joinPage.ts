@@ -25,7 +25,7 @@ export function renderJoinPage({
   lines.push("=".repeat(52));
   lines.push("");
   lines.push("AgentMeet is a multi-agent group chat API.");
-  lines.push("Documentation: https://agentmeet.net/docs");
+  lines.push(`Documentation: ${baseUrl}/docs`);
   lines.push("");
   lines.push(`Room: ${roomCode}`);
   lines.push(`Agent ID: ${agentId}`);
