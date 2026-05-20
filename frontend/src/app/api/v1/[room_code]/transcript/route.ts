@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ensureSchemaReady } from "@/lib/server/db";
-import { roomNotFound } from "@/lib/server/errors";
+import { internalError, roomNotFound } from "@/lib/server/errors";
 import { serializeAgent, serializeMessage } from "@/lib/server/format";
 import { getAgentsInRoom, getPaginatedMessages, getRoom } from "@/lib/server/store";
 
@@ -11,42 +11,46 @@ interface RouteContext {
 }
 
 export async function GET(request: NextRequest, { params }: RouteContext) {
-  await ensureSchemaReady();
+  try {
+    await ensureSchemaReady();
 
-  const { room_code: roomCode } = await params;
-  const room = await getRoom(roomCode);
-  if (!room) return roomNotFound();
+    const { room_code: roomCode } = await params;
+    const room = await getRoom(roomCode);
+    if (!room) return roomNotFound();
 
-  const format = request.nextUrl.searchParams.get("format") ?? "json";
-  const limit = clampInt(request.nextUrl.searchParams.get("limit"), 100, 1, 500);
-  const offset = clampInt(request.nextUrl.searchParams.get("offset"), 0, 0, Number.MAX_SAFE_INTEGER);
-  const [agents, page] = await Promise.all([
-    getAgentsInRoom(roomCode),
-    getPaginatedMessages(roomCode, limit, offset),
-  ]);
+    const format = request.nextUrl.searchParams.get("format") ?? "json";
+    const limit = clampInt(request.nextUrl.searchParams.get("limit"), 100, 1, 500);
+    const offset = clampInt(request.nextUrl.searchParams.get("offset"), 0, 0, Number.MAX_SAFE_INTEGER);
+    const [agents, page] = await Promise.all([
+      getAgentsInRoom(roomCode),
+      getPaginatedMessages(roomCode, limit, offset),
+    ]);
 
-  const data = {
-    room_code: room.room_code,
-    state: room.state,
-    agents: agents.map(serializeAgent),
-    messages: page.messages.map(serializeMessage),
-    message_count: room.message_count,
-    total_messages: page.total_messages,
-    limit: page.limit,
-    offset: page.offset,
-    has_more: page.has_more,
-    created_at: room.created_at.toISOString(),
-    locked_at: room.locked_at?.toISOString(),
-    lock_reason: room.lock_reason ?? undefined,
-  };
+    const data = {
+      room_code: room.room_code,
+      state: room.state,
+      agents: agents.map(serializeAgent),
+      messages: page.messages.map(serializeMessage),
+      message_count: room.message_count,
+      total_messages: page.total_messages,
+      limit: page.limit,
+      offset: page.offset,
+      has_more: page.has_more,
+      created_at: room.created_at.toISOString(),
+      locked_at: room.locked_at?.toISOString(),
+      lock_reason: room.lock_reason ?? undefined,
+    };
 
-  if (format === "md") {
-    return new Response(toMarkdown(data), {
-      headers: { "Content-Type": "text/markdown; charset=utf-8" },
-    });
+    if (format === "md") {
+      return new Response(toMarkdown(data), {
+        headers: { "Content-Type": "text/markdown; charset=utf-8" },
+      });
+    }
+
+    return NextResponse.json(data);
+  } catch (err) {
+    return internalError(err);
   }
-
-  return NextResponse.json(data);
 }
 
 function clampInt(value: string | null, fallback: number, min: number, max: number): number {
