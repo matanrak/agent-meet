@@ -1,4 +1,5 @@
 import { Pool, type QueryResult, type QueryResultRow } from "pg";
+import { SUPABASE_ROOT_CERTS } from "./supabase-ca";
 
 declare global {
   var agentMeetPool: Pool | undefined;
@@ -16,10 +17,19 @@ function getConnectionString(): string {
   return connectionString;
 }
 
-function isRemote(url: string): boolean {
-  return !url.includes("localhost") && !url.includes("127.0.0.1");
+function isLocal(url: string): boolean {
+  return url.includes("localhost") || url.includes("127.0.0.1");
 }
 
+function isSupabase(url: string): boolean {
+  return url.includes(".supabase.com") || url.includes(".supabase.co");
+}
+
+/**
+ * pg-connection-string v2.13+ treats sslmode=require as verify-full, then
+ * Object.assign inside pg's ConnectionParameters overwrites our programmatic
+ * ssl config.  Stripping the param lets our ssl option take effect.
+ */
 function stripSslMode(url: string): string {
   try {
     const parsed = new URL(url);
@@ -33,11 +43,20 @@ function stripSslMode(url: string): string {
 export function getPool(): Pool {
   if (!globalThis.agentMeetPool) {
     const raw = getConnectionString();
-    const usesSsl =
-      process.env.PGSSLMODE !== "disable" && isRemote(raw);
+    const remote = !isLocal(raw);
+
+    let ssl: Pool["options"]["ssl"];
+    if (process.env.PGSSLMODE === "disable" || !remote) {
+      ssl = undefined;
+    } else if (isSupabase(raw)) {
+      ssl = { ca: SUPABASE_ROOT_CERTS };
+    } else {
+      ssl = { rejectUnauthorized: false };
+    }
+
     globalThis.agentMeetPool = new Pool({
-      connectionString: usesSsl ? stripSslMode(raw) : raw,
-      ssl: usesSsl ? { rejectUnauthorized: false } : undefined,
+      connectionString: remote ? stripSslMode(raw) : raw,
+      ssl,
       max: Number(process.env.DB_POOL_MAX_SIZE ?? 20),
       idleTimeoutMillis: 30_000,
       connectionTimeoutMillis: 10_000,
