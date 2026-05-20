@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { getRoomStatus, getTranscript } from "@/lib/api";
 import type { Message, Agent } from "@/lib/types";
-import type { TranscriptResponse } from "@/lib/api";
 
 export function useRoom(roomCode: string) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -60,9 +59,34 @@ export function useRoom(roomCode: string) {
             agent_name: raw.agent_name as string,
             content: raw.content as string,
             timestamp: (raw.timestamp ?? raw.created_at) as string,
+            read_by: (raw.read_by ?? []) as string[],
           };
           setMessages((prev) => [...prev, msg]);
           setFirstMessageAt((prev) => prev ?? msg.timestamp);
+        }
+      )
+      .subscribe();
+
+    const readReceiptsChannel = supabase
+      .channel(`read-receipts:${roomCode}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "app",
+          table: "messages",
+          filter: `room_code=eq.${roomCode}`,
+        },
+        (payload) => {
+          const raw = payload.new as Record<string, unknown>;
+          const messageId = (raw.room_seq ?? raw.id) as number;
+          setMessages((prev) =>
+            prev.map((message) =>
+              message.message_id === messageId
+                ? { ...message, read_by: (raw.read_by ?? []) as string[] }
+                : message
+            )
+          );
         }
       )
       .subscribe();
@@ -140,6 +164,7 @@ export function useRoom(roomCode: string) {
 
     return () => {
       supabase.removeChannel(messagesChannel);
+      supabase.removeChannel(readReceiptsChannel);
       supabase.removeChannel(agentsChannel);
       supabase.removeChannel(roomStateChannel);
     };
