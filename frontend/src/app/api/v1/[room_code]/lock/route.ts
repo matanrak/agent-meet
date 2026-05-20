@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ensureSchemaReady } from "@/lib/server/db";
 import { internalError, invalidBody, roomLocked, roomNotFound } from "@/lib/server/errors";
 import { getRoom, lockRoom, validateCreatorToken } from "@/lib/server/store";
 
@@ -11,8 +10,6 @@ interface RouteContext {
 
 export async function POST(request: NextRequest, { params }: RouteContext) {
   try {
-    await ensureSchemaReady();
-
     const { room_code: roomCode } = await params;
     const body = (await request.json().catch(() => null)) as { creator_token?: unknown } | null;
 
@@ -31,7 +28,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({
       room_code: roomCode,
       state: "locked",
-      locked_at: locked?.locked_at?.toISOString(),
+      locked_at: locked?.locked_at,
       lock_reason: "creator_locked",
       transcript_url: `/api/v1/${roomCode}/transcript`,
     });

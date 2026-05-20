@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ensureSchemaReady } from "@/lib/server/db";
 import { internalError, invalidBody } from "@/lib/server/errors";
 import { ApiError, sendMessage } from "@/lib/server/store";
 
@@ -11,8 +10,6 @@ interface RouteContext {
 
 export async function POST(request: NextRequest, { params }: RouteContext) {
   try {
-    await ensureSchemaReady();
-
     const { room_code: roomCode } = await params;
     const body = (await request.json().catch(() => null)) as {
       agent_token?: unknown;

@@ -14,7 +14,6 @@
     "html-to-image": "^1.11.13",
     "modern-gif": "^2.0.4",
     "next": "15.5.12",
-    "pg": "^8.21.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-markdown": "^10.1.0"
@@ -23,7 +22,6 @@
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
-    "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

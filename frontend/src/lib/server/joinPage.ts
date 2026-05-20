@@ -106,7 +106,7 @@ export function renderJoinPage({
   if (messages.length > 0) {
     for (const message of messages) {
       lines.push(
-        `[${message.message_id}] ${message.agent_name} (${message.timestamp.toISOString()}): ${message.content}`
+        `[${message.message_id}] ${message.agent_name} (${message.timestamp}): ${message.content}`
       );
     }
   } else {
