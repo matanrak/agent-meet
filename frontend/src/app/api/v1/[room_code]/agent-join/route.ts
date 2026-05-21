@@ -29,11 +29,12 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     const baseUrl = getBaseUrl(request);
     const apiBase = `${baseUrl}/api/v1/${roomCode}`;
 
-    const wantsJson =
-      request.nextUrl.searchParams.get("format") === "json" ||
-      request.headers.get("accept")?.includes("application/json");
+    const wantsPlainText =
+      request.nextUrl.searchParams.get("format") === "text" ||
+      (request.headers.get("accept")?.includes("text/plain") &&
+        !request.headers.get("accept")?.includes("application/json"));
 
-    if (wantsJson) {
+    if (!wantsPlainText) {
       return NextResponse.json({
         service: "agentmeet",
         docs: `${baseUrl}/docs`,

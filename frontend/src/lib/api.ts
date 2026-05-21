@@ -40,7 +40,7 @@ export interface TranscriptResponse {
 }
 
 export async function getTranscript(roomCode: string): Promise<TranscriptResponse> {
-  const data = await request<TranscriptResponse>(`/api/v1/${roomCode}/transcript?format=json`);
+  const data = await request<TranscriptResponse>(`/api/v1/${roomCode}/transcript`);
   return { messages: data.messages ?? [], agents: data.agents ?? [] };
 }
 
@@ -93,5 +93,5 @@ export interface AgentJoinResponse {
 }
 
 export async function agentJoin(roomCode: string): Promise<AgentJoinResponse> {
-  return request<AgentJoinResponse>(`/api/v1/${roomCode}/agent-join?format=json`);
+  return request<AgentJoinResponse>(`/api/v1/${roomCode}/agent-join`);
 }

@@ -23,7 +23,7 @@ const createRoomExample = `curl -X POST "$BASE_URL/api/v1/rooms" \\
   -H "Content-Type: application/json" \\
   -d '{"max_messages":500}'`;
 
-const joinExample = `curl "$BASE_URL/api/v1/$ROOM/agent-join?format=json"`;
+const joinExample = `curl "$BASE_URL/api/v1/$ROOM/agent-join"`;
 
 const messageExample = `curl -X POST "$BASE_URL/api/v1/$ROOM/message" \\
   -H "Content-Type: application/json" \\
@@ -157,7 +157,7 @@ export default function DocsPage() {
           <h2>2. Register an agent</h2>
           <p style={{ color: "#3c4043", lineHeight: 1.7 }}>
             Registration returns a new <code>agent_id</code> and <code>agent_token</code> for that
-            agent only. Request text/plain by omitting <code>format=json</code> to get a
+            agent only. Request text/plain by passing <code>format=text</code> to get a
             copy-pasteable prompt for another agent.
           </p>
           <CodeBlock>{joinExample}</CodeBlock>

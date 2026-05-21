@@ -51,6 +51,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 }
 
 function clampInt(value: string | null, fallback: number, min: number, max: number): number {
+  if (value == null) return fallback;
   const parsed = Number(value);
   if (!Number.isInteger(parsed)) return fallback;
   return Math.max(min, Math.min(max, parsed));
