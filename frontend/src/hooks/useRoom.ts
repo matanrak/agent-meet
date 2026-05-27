@@ -4,7 +4,25 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { getRoomStatus, getTranscript } from "@/lib/api";
 import type { Message, Agent } from "@/lib/types";
-import type { TranscriptResponse } from "@/lib/api";
+
+/**
+ * Merge incoming messages into the existing list, deduping by message_id and
+ * keeping the canonical room_seq order. Used by the initial fetch, the realtime
+ * stream, and the polling fallback so the same message arriving via different
+ * paths never duplicates and new messages are never dropped.
+ */
+function mergeMessages(prev: Message[], incoming: Message[]): Message[] {
+  if (incoming.length === 0) return prev;
+  const byId = new Map<number, Message>();
+  for (const m of prev) byId.set(m.message_id, m);
+  let changed = false;
+  for (const m of incoming) {
+    if (!byId.has(m.message_id)) changed = true;
+    byId.set(m.message_id, m);
+  }
+  if (!changed) return prev;
+  return Array.from(byId.values()).sort((a, b) => a.message_id - b.message_id);
+}
 
 export function useRoom(roomCode: string) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -25,7 +43,9 @@ export function useRoom(roomCode: string) {
       setRoomState(status.state);
       setLockReason(status.lock_reason);
       setFirstMessageAt(status.first_message_at);
-      setMessages(transcript.messages);
+      // Merge rather than replace so realtime messages that arrived during the
+      // initial fetch aren't clobbered.
+      setMessages((prev) => mergeMessages(prev, transcript.messages));
       setAgents(transcript.agents);
     } catch (err) {
       if (err instanceof Error && err.message.includes("404")) {
@@ -55,13 +75,15 @@ export function useRoom(roomCode: string) {
         (payload) => {
           const raw = payload.new as Record<string, unknown>;
           const msg: Message = {
-            message_id: (raw.message_id ?? raw.id) as number,
+            // The transcript API exposes message_id as the per-room room_seq;
+            // mirror that here so realtime messages dedupe against fetched ones.
+            message_id: (raw.room_seq ?? raw.message_id ?? raw.id) as number,
             agent_id: raw.agent_id as string,
             agent_name: raw.agent_name as string,
             content: raw.content as string,
             timestamp: (raw.timestamp ?? raw.created_at) as string,
           };
-          setMessages((prev) => [...prev, msg]);
+          setMessages((prev) => mergeMessages(prev, [msg]));
           setFirstMessageAt((prev) => prev ?? msg.timestamp);
         }
       )
@@ -144,6 +166,24 @@ export function useRoom(roomCode: string) {
       supabase.removeChannel(roomStateChannel);
     };
   }, [roomCode, fetchInitialData]);
+
+  // Polling fallback: Supabase Realtime on the custom `app` schema can silently
+  // fail to deliver, leaving the transcript stuck on whatever the initial fetch
+  // returned. Poll the transcript while the room is active and merge in anything
+  // new so the UI keeps updating even when the realtime stream is down.
+  useEffect(() => {
+    if (roomState === "locked") return;
+    const id = setInterval(async () => {
+      try {
+        const { messages: latest, agents: latestAgents } = await getTranscript(roomCode);
+        setMessages((prev) => mergeMessages(prev, latest));
+        if (latestAgents.length > 0) setAgents(latestAgents);
+      } catch {
+        // Transient fetch failure; next tick will retry.
+      }
+    }, 3000);
+    return () => clearInterval(id);
+  }, [roomCode, roomState]);
 
   return { messages, agents, roomState, lockReason, firstMessageAt, isLoading, notFound };
 }
