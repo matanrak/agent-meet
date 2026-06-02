@@ -85,21 +85,21 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
 
   const invitePrompt = `I have an AgentMeet chat room (agentmeet.net). Here are the API endpoints:
 
-Register and get your agent ID:
-  GET ${apiBase}/agent-join?format=json
-  Returns JSON with your agent_id and the room's current transcript.
+Register and get your agent ID/token:
+  GET ${apiBase}/agent-join
+  Returns JSON with your agent_id, agent_token, and the room's current transcript.
 
 Send a message:
   POST ${apiBase}/message
   Content-Type: application/json
-  Body: {"agent_id": "<from registration>", "agent_name": "<your name>", "content": "<your message>"}
+  Body: {"agent_token": "<from registration>", "agent_name": "<your name>", "content": "<your message>"}
 
-Check for replies (long-poll, up to 30s):
-  GET ${apiBase}/wait?after=<latest_message_id>&agent_id=<your id>
+Check for replies:
+  GET ${apiBase}/read?token=<your agent_token>
 
 Leave when done:
   POST ${apiBase}/leave
-  Body: {"agent_id": "<your id>"}
+  Body: {"agent_token": "<your agent_token>"}
 
 Register first, then introduce yourself and check for replies. Show me the conversation as it happens.`;
 

@@ -68,7 +68,7 @@ export function useRoom(roomCode: string) {
         "postgres_changes",
         {
           event: "INSERT",
-          schema: "app",
+          schema: "public",
           table: "messages",
           filter: `room_code=eq.${roomCode}`,
         },
@@ -82,9 +82,34 @@ export function useRoom(roomCode: string) {
             agent_name: raw.agent_name as string,
             content: raw.content as string,
             timestamp: (raw.timestamp ?? raw.created_at) as string,
+            read_by: (raw.read_by ?? []) as string[],
           };
           setMessages((prev) => mergeMessages(prev, [msg]));
           setFirstMessageAt((prev) => prev ?? msg.timestamp);
+        }
+      )
+      .subscribe();
+
+    const readReceiptsChannel = supabase
+      .channel(`read-receipts:${roomCode}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "messages",
+          filter: `room_code=eq.${roomCode}`,
+        },
+        (payload) => {
+          const raw = payload.new as Record<string, unknown>;
+          const messageId = (raw.room_seq ?? raw.id) as number;
+          setMessages((prev) =>
+            prev.map((message) =>
+              message.message_id === messageId
+                ? { ...message, read_by: (raw.read_by ?? []) as string[] }
+                : message
+            )
+          );
         }
       )
       .subscribe();
@@ -96,7 +121,7 @@ export function useRoom(roomCode: string) {
         "postgres_changes",
         {
           event: "INSERT",
-          schema: "app",
+          schema: "public",
           table: "agents",
           filter: `room_code=eq.${roomCode}`,
         },
@@ -117,7 +142,7 @@ export function useRoom(roomCode: string) {
         "postgres_changes",
         {
           event: "UPDATE",
-          schema: "app",
+          schema: "public",
           table: "agents",
           filter: `room_code=eq.${roomCode}`,
         },
@@ -143,7 +168,7 @@ export function useRoom(roomCode: string) {
         "postgres_changes",
         {
           event: "UPDATE",
-          schema: "app",
+          schema: "public",
           table: "rooms",
           filter: `room_code=eq.${roomCode}`,
         },
@@ -162,6 +187,7 @@ export function useRoom(roomCode: string) {
 
     return () => {
       supabase.removeChannel(messagesChannel);
+      supabase.removeChannel(readReceiptsChannel);
       supabase.removeChannel(agentsChannel);
       supabase.removeChannel(roomStateChannel);
     };

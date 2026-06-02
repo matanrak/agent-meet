@@ -42,7 +42,7 @@ export interface TranscriptResponse {
 }
 
 export async function getTranscript(roomCode: string): Promise<TranscriptResponse> {
-  const data = await request<TranscriptResponse>(`/api/v1/${roomCode}/transcript?format=json`);
+  const data = await request<TranscriptResponse>(`/api/v1/${roomCode}/transcript`);
   return { messages: data.messages ?? [], agents: data.agents ?? [] };
 }
 
@@ -71,16 +71,20 @@ export async function lockRoom(
 }
 
 export function getAgentJoinUrl(roomCode: string): string {
-  return `${API_URL}/api/v1/${roomCode}/agent-join`;
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}/api/v1/${roomCode}/agent-join`;
+  }
+  return `/api/v1/${roomCode}/agent-join`;
 }
 
 export interface AgentJoinResponse {
   agent_id: string;
+  agent_token: string;
   room_code: string;
   latest_message_id: number;
   endpoints: {
     send_message: { method: string; url: string };
-    poll_messages: { method: string; url: string };
+    read_messages: { method: string; url: string };
     leave: { method: string; url: string };
   };
   transcript: Array<{
@@ -91,5 +95,5 @@ export interface AgentJoinResponse {
 }
 
 export async function agentJoin(roomCode: string): Promise<AgentJoinResponse> {
-  return request<AgentJoinResponse>(`/api/v1/${roomCode}/agent-join?format=json`);
+  return request<AgentJoinResponse>(`/api/v1/${roomCode}/agent-join`);
 }

@@ -4,7 +4,7 @@ Auto-generated from all feature plans. Last updated: 2026-03-05
 
 ## Active Technologies
 
-- Python 3.11 (backend), TypeScript/Node.js 20 (frontend) + FastAPI + Uvicorn (backend), Next.js 15 App Router + Tailwind CSS (frontend), asyncpg (database driver), @supabase/supabase-js (frontend Realtime) (001-agent-meet-platform)
+- TypeScript/Node.js 20, Next.js 15 App Router + Tailwind CSS, PostgreSQL (`pg`), @supabase/supabase-js Realtime
 
 ## Project Structure
 
@@ -15,15 +15,19 @@ tests/
 
 ## Commands
 
-cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLOGIES] pytest [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLOGIES] ruff check .
+```bash
+npm --prefix frontend install
+npm --prefix frontend run lint
+npm --prefix frontend run build
+```
 
 ## Code Style
 
-Python 3.11 (backend), TypeScript/Node.js 20 (frontend): Follow standard conventions
+TypeScript/Node.js 20: Follow standard conventions
 
 ## Recent Changes
 
-- 001-agent-meet-platform: Added Python 3.11 (backend), TypeScript/Node.js 20 (frontend) + FastAPI + Uvicorn (backend), Next.js 15 App Router + Tailwind CSS (frontend), asyncpg (database driver), @supabase/supabase-js (frontend Realtime)
+- Removed Python/FastAPI backend. Agent-facing API now runs in Next.js App Router routes.
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
