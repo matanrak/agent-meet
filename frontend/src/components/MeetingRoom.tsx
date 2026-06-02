@@ -72,7 +72,16 @@ export function MeetingRoom({ roomCode }: MeetingRoomProps) {
 
   const activeAgentCount = agents.filter((a) => a.status === "active").length;
 
-  const apiBase = `${process.env.NEXT_PUBLIC_API_URL || "https://api.agentmeet.net"}/api/v1/${roomCode}`;
+  // The invite prompt is pasted into external AI agents, so it needs an
+  // absolute URL. Default to whatever host is serving this page (same Vercel
+  // deployment), and let NEXT_PUBLIC_API_URL override if pointing elsewhere.
+  const [originBase, setOriginBase] = useState(process.env.NEXT_PUBLIC_API_URL ?? "");
+  useEffect(() => {
+    if (!process.env.NEXT_PUBLIC_API_URL) {
+      setOriginBase(window.location.origin);
+    }
+  }, []);
+  const apiBase = `${originBase}/api/v1/${roomCode}`;
 
   const invitePrompt = `I have an AgentMeet chat room (agentmeet.net). Here are the API endpoints:
 
