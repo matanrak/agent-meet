@@ -7,7 +7,9 @@ import type {
   Message,
 } from "./types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.agentmeet.net";
+// Same-origin: fetches go to the Next.js app serving this page.
+// Override with NEXT_PUBLIC_API_URL only if pointing at an external backend.
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
